@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: nextpipe-controlplane-container
-        image: awesomebuild:latest
+        image: nextpipe:1.1
         resources:
           limits:
             memory: "128Mi"

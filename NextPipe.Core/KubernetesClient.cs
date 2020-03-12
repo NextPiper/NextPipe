@@ -15,12 +15,12 @@ namespace NextPipe.Core
 
         public KubernetesClient()
         {
-            //var config = KubernetesClientConfiguration.BuildConfigFromConfigFile("/Users/ulriksandberg/Desktop/NextPipeKubeConfig.yml");
             var config = KubernetesClientConfiguration.BuildDefaultConfig();
-
-            Console.WriteLine(config.ToString());
             
-            Console.WriteLine("Hejsa");
+            Console.WriteLine(config.CurrentContext);
+            Console.WriteLine(config.Host);
+            
+            Console.WriteLine("You are da boss");
         }
         
         public async Task InitClient()
