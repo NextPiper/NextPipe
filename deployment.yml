@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextpipe-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nextpipe-controlplane
+  template:
+    metadata:
+      labels:
+        app: nextpipe-controlplane
+    spec:
+      containers:
+      - name: nextpipe-controlplane-container
+        image: awesomebuild:latest
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 80
