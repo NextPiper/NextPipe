@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+
 using k8s;
 
 namespace NextPipe.Core
@@ -16,8 +17,10 @@ namespace NextPipe.Core
         {
             //var config = KubernetesClientConfiguration.BuildConfigFromConfigFile("/Users/ulriksandberg/Desktop/NextPipeKubeConfig.yml");
             var config = KubernetesClientConfiguration.BuildDefaultConfig();
+
+            Console.WriteLine(config.ToString());
             
-            Console.WriteLine("Heja");
+            Console.WriteLine("Hejsa");
         }
         
         public async Task InitClient()
