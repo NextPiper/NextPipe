@@ -1,3 +1,4 @@
+using k8s;
 using Lamar;
 
 namespace NextPipe.Core.CoreRegistry
@@ -7,6 +8,7 @@ namespace NextPipe.Core.CoreRegistry
         public CoreRegistry()
         {
             For<IKubernetesClient>().Use<KubernetesClient>();
+            For<IKubernetes>().Use(ctx => new Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig()));
         }
     }
 }

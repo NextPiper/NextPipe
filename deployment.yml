@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: nextpipe-deployment
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: nextpipe-controlplane
@@ -12,12 +12,26 @@ spec:
       labels:
         app: nextpipe-controlplane
     spec:
+      volumes:
+      - name: kubectl
+        emptyDir: {}
+      initContainers:
+        - name: install-kubectl
+          image: allanlei/kubectl
+          volumeMounts:
+          - name: kubectl
+            mountPath: /data
+          command: ["cp", "/usr/local/bin/kubectl", "/data/kubectl"]
       containers:
       - name: nextpipe-controlplane-container
-        image: nextpipe:1.1
+        image: nextpipe:2.7
         resources:
           limits:
             memory: "128Mi"
             cpu: "500m"
         ports:
         - containerPort: 80
+        volumeMounts:
+        - name: kubectl
+          subPath: kubectl
+          mountPath: /usr/local/bin/kubectl

@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NextPipe", "NextPipe\NextPi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NextPipe.Core", "NextPipe.Core\NextPipe.Core.csproj", "{92414C50-4791-454A-8092-BDB95409FA50}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NextPipe.Persistence", "NextPipe.Persistence\NextPipe.Persistence.csproj", "{5A40ADF2-9FB1-4FAC-8C62-7650433ED122}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,5 +21,9 @@ Global
 		{92414C50-4791-454A-8092-BDB95409FA50}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{92414C50-4791-454A-8092-BDB95409FA50}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{92414C50-4791-454A-8092-BDB95409FA50}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A40ADF2-9FB1-4FAC-8C62-7650433ED122}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A40ADF2-9FB1-4FAC-8C62-7650433ED122}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A40ADF2-9FB1-4FAC-8C62-7650433ED122}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A40ADF2-9FB1-4FAC-8C62-7650433ED122}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

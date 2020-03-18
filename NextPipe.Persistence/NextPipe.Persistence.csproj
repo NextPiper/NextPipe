@@ -5,10 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Helm" Version="0.1.35" />
-      <PackageReference Include="KubernetesClient" Version="1.6.11" />
       <PackageReference Include="Lamar" Version="4.1.0" />
-      <PackageReference Include="Lamar.Microsoft.DependencyInjection" Version="4.1.0" />
     </ItemGroup>
 
 </Project>

@@ -17,7 +17,7 @@ namespace NextPipe.Services
         
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            
+            _kubernetesClient.InitClient();
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
