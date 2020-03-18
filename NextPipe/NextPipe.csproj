@@ -18,5 +18,9 @@
     <ProjectReference Include="..\NextPipe.Core\NextPipe.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="ActionFilters" />
+  </ItemGroup>
+
 
 </Project>

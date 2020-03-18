@@ -24,14 +24,14 @@ namespace NextPipe.Core
         public async Task InitClient()
         {
             // Use rabbitDeploymentManager to ensure that rabbitMQ infrastructure has been provisioned.
-            var rabbitDeploymentManager = new RabbitDeploymentManager(_kubeClient, new RabbitDeploymentConfiguration(
+            /*var rabbitDeploymentManager = new RabbitDeploymentManager(_kubeClient, new RabbitDeploymentConfiguration(
                 () => Console.WriteLine("Success"),
                 () => Console.WriteLine("Failure"),
                 2,
                 6,
                 30
                 ));
-            await rabbitDeploymentManager.Init(2, 6, 30);
+            await rabbitDeploymentManager.Init(2, 6, 30);*/
             
         }
 

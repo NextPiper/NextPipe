@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NextPipe.Core", "NextPipe.C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NextPipe.Persistence", "NextPipe.Persistence\NextPipe.Persistence.csproj", "{5A40ADF2-9FB1-4FAC-8C62-7650433ED122}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NextPipe.Messaging.Infrastructure", "NextPipe.Messaging.Infrastructure\NextPipe.Messaging.Infrastructure.csproj", "{439BE899-A777-4246-B0EC-A91ECD6C8619}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NextPipe.Utilities", "NextPipe.Utilities\NextPipe.Utilities.csproj", "{C6ED6E65-594E-41C2-8A3F-48F28415CE2D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -25,5 +29,13 @@ Global
 		{5A40ADF2-9FB1-4FAC-8C62-7650433ED122}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A40ADF2-9FB1-4FAC-8C62-7650433ED122}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A40ADF2-9FB1-4FAC-8C62-7650433ED122}.Release|Any CPU.Build.0 = Release|Any CPU
+		{439BE899-A777-4246-B0EC-A91ECD6C8619}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{439BE899-A777-4246-B0EC-A91ECD6C8619}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{439BE899-A777-4246-B0EC-A91ECD6C8619}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{439BE899-A777-4246-B0EC-A91ECD6C8619}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C6ED6E65-594E-41C2-8A3F-48F28415CE2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C6ED6E65-594E-41C2-8A3F-48F28415CE2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C6ED6E65-594E-41C2-8A3F-48F28415CE2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C6ED6E65-594E-41C2-8A3F-48F28415CE2D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

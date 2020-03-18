@@ -6,19 +6,18 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NextPipe.Configuration;
+using NextPipe.Messaging.Infrastructure.Contracts;
+using NextPipe.RequestModels;
 using ILogger = Serilog.ILogger;
 
 namespace NextPipe.Controllers
 {
     [ApiController]
     [Route("core/health")]
-    public class HealthController : ControllerBase
+    public class HealthController : BaseController
     {
-        private readonly ILogger _logger;
-
-        public HealthController(ILogger logger)
+        public HealthController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter) : base(logger, queryRouter, commandRouter)
         {
-            _logger = logger;
         }
 
         [HttpGet]
@@ -31,7 +30,7 @@ namespace NextPipe.Controllers
 
         [HttpGet]
         [Route("deepHealthCheck")]
-        public async Task<IActionResult> ValidateDeepHealthStatus()
+        public async Task<IActionResult> ValidateDeepHealthStatus([FromBody] InstallModuleRM moduleInstallRM)
         {
             return new ObjectResult("All services are up and running");
         }

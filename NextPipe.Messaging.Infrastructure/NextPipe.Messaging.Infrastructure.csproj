@@ -6,11 +6,11 @@
 
     <ItemGroup>
       <PackageReference Include="Lamar" Version="4.1.0" />
-      <PackageReference Include="Lamar.Microsoft.DependencyInjection" Version="4.1.0" />
+      <PackageReference Include="SimpleSoft.Mediator" Version="1.0.0" />
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Repositories" />
+      <ProjectReference Include="..\NextPipe.Utilities\NextPipe.Utilities.csproj" />
     </ItemGroup>
 
 </Project>

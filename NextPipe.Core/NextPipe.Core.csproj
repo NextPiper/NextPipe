@@ -9,6 +9,19 @@
       <PackageReference Include="KubernetesClient" Version="1.6.11" />
       <PackageReference Include="Lamar" Version="4.1.0" />
       <PackageReference Include="Lamar.Microsoft.DependencyInjection" Version="4.1.0" />
+      <PackageReference Include="SimpleSoft.Mediator.Abstractions" Version="1.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Domain\KubeDeployment\ValueObjects" />
+      <Folder Include="Domain\SharedValueObjects" />
+      <Folder Include="Events\Events" />
+      <Folder Include="Events\Handlers" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\NextPipe.Messaging.Infrastructure\NextPipe.Messaging.Infrastructure.csproj" />
+      <ProjectReference Include="..\NextPipe.Persistence\NextPipe.Persistence.csproj" />
     </ItemGroup>
 
 </Project>
