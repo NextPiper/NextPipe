@@ -14,6 +14,7 @@ namespace NextPipe.Core.CoreRegistry
             For<IKubernetesClient>().Use<KubernetesClient>();
             For<IKubernetes>().Use(ctx => new k8s.Kubernetes(KubernetesClientConfiguration.BuildDefaultConfig()));
             For<IKubectlHelper>().Use<KubectlHelper>();
+            For<IRabbitDeploymentManager>().Use<RabbitDeploymentManager>();
             
             IncludeRegistry<MessagingInfrastructureRegistry>();
             IncludeRegistry<PersistenceRegistry>();

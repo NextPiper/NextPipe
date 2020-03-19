@@ -29,7 +29,7 @@ namespace NextPipe.Core.Commands.Handlers
             // Create the new object right here and do the validation in there!
             
             // Check if the infrastructure is running, if so reply that infrastructure already has been initialized
-            if (_rabbitDeploymentManager.IsInfrastructureRunning(cmd.LowerBoundaryReadyReplicas))
+            if (_rabbitDeploymentManager.IsInfrastructureRunning(cmd.LowerBoundaryReadyReplicas.Value))
             {
                 
             }

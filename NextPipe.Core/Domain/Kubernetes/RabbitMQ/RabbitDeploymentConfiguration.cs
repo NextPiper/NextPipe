@@ -3,6 +3,11 @@ using System.Diagnostics;
 
 namespace NextPipe.Core
 {
+    public interface IRabbitDeploymentConfiguration
+    {
+    }
+    
+    
     public class RabbitDeploymentConfiguration
     {
         public const string RABBIT_MQ_DEPLOYMENT = "rabbitmq";
