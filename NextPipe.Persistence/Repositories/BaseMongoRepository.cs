@@ -9,7 +9,7 @@ using NextPipe.Persistence.Entities;
 
 namespace NextPipe.Persistence.Repositories
 {
-    public class BaseMongoRepository<TEntity> : IMongoRepository<TEntity> where TEntity : IEntity
+    public abstract class BaseMongoRepository<TEntity> : IMongoRepository<TEntity> where TEntity : IEntity
     {
         // Client for establishing a connection
         private readonly IMongoClient _mongoClient;

@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace NextPipe.Core
+namespace NextPipe.Utilities.Core
 {
     public static class ShellHelper
     {

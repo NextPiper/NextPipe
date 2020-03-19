@@ -9,10 +9,10 @@ using Serilog;
 namespace NextPipe.Controllers
 {
     [ApiController]
-    [Route("core/startup")]
-    public class StartupController : BaseController
+    [Route("core/tasks")]
+    public class TasksController : BaseController
     {
-        public StartupController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter) : base(logger, queryRouter, commandRouter)
+        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter) : base(logger, queryRouter, commandRouter)
         {
         }
 
@@ -21,10 +21,10 @@ namespace NextPipe.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpPost]
-        [Route("/requests")]
+        [Route("request-initialize-infrastructure")]
         public async Task<IActionResult> RequestInitializeInfrastructure()
         {
-            var result = await RouteAsync<RequestInitializeInfrastructure, Response>(new RequestInitializeInfrastructure());
+            var result = await RouteAsync<RequestInitializeInfrastructure, TaskRequestResponse>(new RequestInitializeInfrastructure(2));
 
             return ReadDefaultResponse(result);
         }

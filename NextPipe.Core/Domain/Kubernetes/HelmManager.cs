@@ -1,4 +1,5 @@
 using System;
+using NextPipe.Utilities.Core;
 
 namespace NextPipe.Core
 {

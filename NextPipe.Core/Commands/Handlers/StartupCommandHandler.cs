@@ -14,18 +14,27 @@ namespace NextPipe.Core.Commands.Handlers
     public class StartupCommandHandler : CommandHandlerBase,
         ICommandHandler<RequestInitializeInfrastructure, Response>
     {
-        private readonly IKubectlHelper _kubectlHelper;
-        private readonly IProcessesRepository _processesRepository;
+        private readonly ITasksRepository _tasksRepository;
+        private readonly IRabbitDeploymentManager _rabbitDeploymentManager;
 
-        public StartupCommandHandler(IEventPublisher eventPublisher, IKubectlHelper kubectlHelper, IProcessesRepository processesRepository) : base(eventPublisher)
+
+        public StartupCommandHandler(IEventPublisher eventPublisher, ITasksRepository tasksRepository, IRabbitDeploymentManager rabbitDeploymentManager) : base(eventPublisher)
         {
-            _kubectlHelper = kubectlHelper;
-            _processesRepository = processesRepository;
+            _tasksRepository = tasksRepository;
+            _rabbitDeploymentManager = rabbitDeploymentManager;
         }
 
         public async Task<Response> HandleAsync(RequestInitializeInfrastructure cmd, CancellationToken ct)
         {
+            // Create the new object right here and do the validation in there!
+            
             // Check if the infrastructure is running, if so reply that infrastructure already has been initialized
+            if (_rabbitDeploymentManager.IsInfrastructureRunning(cmd.LowerBoundaryReadyReplicas))
+            {
+                
+            }
+            
+            
             // Check if InitializeInfrastructureRequest has already been accepted and is being processed by a replica
             
             // Accept the requestInitializeInfrastructure --> Generate Process Id and upload status to DB return success
@@ -40,5 +49,8 @@ namespace NextPipe.Core.Commands.Handlers
             ), _kubectlHelper);*/
             return Response.Success();
         }
+
+
+        
     }
 }
