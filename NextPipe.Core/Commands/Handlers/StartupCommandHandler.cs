@@ -26,11 +26,10 @@ namespace NextPipe.Core.Commands.Handlers
 
         public async Task<Response> HandleAsync(RequestInitializeInfrastructure cmd, CancellationToken ct)
         {
-            // Create the new object right here and do the validation in there!
-            
             // Check if the infrastructure is running, if so reply that infrastructure already has been initialized
             if (_rabbitDeploymentManager.IsInfrastructureRunning(cmd.LowerBoundaryReadyReplicas.Value))
             {
+                // Have a look at the Task repository in order to check that there is no running Task of type NextPipeInfrastructure Provisioning
                 
             }
             

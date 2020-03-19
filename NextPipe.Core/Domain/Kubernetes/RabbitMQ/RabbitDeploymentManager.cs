@@ -67,8 +67,7 @@ namespace NextPipe.Core
             {
                 Console.WriteLine($"RabbitMQ Service deployed --> Checking ready nodes");
                 // Validate that at least lowerBoundaryReplicas are running for availability across the cluster
-                var isClusterReady = await WaitForLowerBoundaryReplicas(config.lowerBoundaryReplicas, failureThreshold,
-                    trialsDelaySec, RABBIT_MQ_STATEFULSET);
+                var isClusterReady = await WaitForLowerBoundaryReplicas(config, RABBIT_MQ_STATEFULSET);
     
                 if (isClusterReady)
                 {
@@ -101,7 +100,7 @@ namespace NextPipe.Core
                     await Task.Delay(30.ToMillis());
     
                     // Call everything again this time provision the infrastructure if it is still not up yet
-                    await Init(lowerBoundaryReplicas, failureThreshold, trialsDelaySec, true);
+                    await Init(config, true);
                 }
     
                 Console.WriteLine("No existing RabbitMQ infrastructure --> Provision RabbitMQ infrastructure");
@@ -111,20 +110,19 @@ namespace NextPipe.Core
                 await Task.Delay(30.ToMillis());
                 // Once helm has installed and rabbitMQ has been provisioned to the cluster by helm retry the init call
                 // else abort the process...
-                await Init(lowerBoundaryReplicas, failureThreshold, trialsDelaySec, true, true);
+                await Init(config, true, true);
             }
         }
     
-        private async Task<bool> WaitForLowerBoundaryReplicas(int lowerBoundaryReplicas, int failureThreshold,
-            int trialsDelaySec, string statefulsetname, string nameSpace = "default")
+        private async Task<bool> WaitForLowerBoundaryReplicas(IRabbitDeploymentConfiguration config, string statefulsetname, string nameSpace = "default")
         {
             // true as long as none of the constraints are met
             var failedAttempts = 0;
     
             var readyReplicas = _kubectlHelper.GetNumberOfStatefulsetReadyReplicas(statefulsetname, nameSpace);
-            Console.WriteLine($"lowerBoundaryReplicas={lowerBoundaryReplicas}, readyReplicas={readyReplicas}");
+            Console.WriteLine($"lowerBoundaryReplicas={config.LowerBoundaryReadyReplicas}, readyReplicas={readyReplicas}");
     
-            if (readyReplicas >= lowerBoundaryReplicas)
+            if (readyReplicas >= config.LowerBoundaryReadyReplicas)
             {
                 return true;
             }
@@ -132,26 +130,26 @@ namespace NextPipe.Core
             Console.WriteLine("Waiting for ready replicas...");
     
             // Wait the initial delay
-            await Task.Delay(trialsDelaySec.ToMillis());
+            await Task.Delay(config.ReplicaDelaySeconds.ToMillis());
     
             while (true)
             {
                 var rReplicas = _kubectlHelper.GetNumberOfStatefulsetReadyReplicas(statefulsetname, nameSpace);
-                if (rReplicas >= lowerBoundaryReplicas)
+                if (rReplicas >= config.LowerBoundaryReadyReplicas)
                 {
                     return true;
                 }
     
                 // Increment the failed attempts
                 failedAttempts++;
-                if (failedAttempts >= failureThreshold)
+                if (failedAttempts >= config.ReplicaFailureThreshold)
                 {
                     return false;
                 }
     
                 Console.WriteLine(
-                    $"lowerBoundaryReplicas={lowerBoundaryReplicas}, readyReplicas={readyReplicas}. {lowerBoundaryReplicas - readyReplicas} ready replica(s) needed for operations");
-                await Task.Delay(trialsDelaySec.ToMillis());
+                    $"lowerBoundaryReplicas={config.LowerBoundaryReadyReplicas}, readyReplicas={readyReplicas}. {config.LowerBoundaryReadyReplicas - readyReplicas} ready replica(s) needed for operations");
+                await Task.Delay(config.ReplicaDelaySeconds.ToMillis());
             }
         }
     }

@@ -24,7 +24,7 @@ namespace NextPipe.Controllers
         [Route("request-initialize-infrastructure")]
         public async Task<IActionResult> RequestInitializeInfrastructure()
         {
-            var result = await RouteAsync<RequestInitializeInfrastructure, TaskRequestResponse>(new RequestInitializeInfrastructure(2));
+            var result = await RouteAsync<RequestInitializeInfrastructure, TaskRequestResponse>(new RequestInitializeInfrastructure(2, 6, 30));
 
             return ReadDefaultResponse(result);
         }
