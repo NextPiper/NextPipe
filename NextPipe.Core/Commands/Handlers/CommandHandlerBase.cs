@@ -4,7 +4,7 @@ namespace NextPipe.Core.Commands.Handlers
 {
     public class CommandHandlerBase
     {
-        private readonly IEventPublisher _eventPublisher;
+        protected readonly IEventPublisher _eventPublisher;
 
         public CommandHandlerBase(IEventPublisher eventPublisher)
         {

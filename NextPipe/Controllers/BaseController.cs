@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NextPipe.Messaging.Infrastructure.Contracts;
+using NextPipe.Utilities.Documents.Responses;
 using Serilog;
 using SimpleSoft.Mediator;
 
@@ -27,6 +28,18 @@ namespace NextPipe.Controllers
         protected async Task<TResponse> RouteAsync<TCommand, TResponse>(TCommand cmd) where TCommand : ICommand<TResponse>
         {
             return await _commandRouter.RouteAsync<TCommand, TResponse>(cmd);
+        }
+
+        protected IActionResult ReadDefaultResponse(Response response, int statusCode = 500)
+        {
+            if (response.IsSuccessful)
+            {
+                return StatusCode(200);
+            }
+            else
+            {
+                return StatusCode(statusCode, response.Message);
+            }
         }
     }
 }

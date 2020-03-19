@@ -6,6 +6,7 @@ using k8s;
 using k8s.Models;
 using Microsoft.AspNetCore.Http.Features;
 using NextPipe.Core.Documents;
+using NextPipe.Core.Kubernetes;
 
 namespace NextPipe.Core
 {
@@ -15,11 +16,12 @@ namespace NextPipe.Core
         private const string RABBIT_MQ_DEPLOYMENT = "rabbitmq";
         private const string NEXT_PIPE_DEPLOYMENT = "nextpipe-deployment";
         private RabbitDeploymentConfiguration _config;
-        
-        public RabbitDeploymentManager(IKubernetes client, RabbitDeploymentConfiguration config)
+        private readonly IKubectlHelper _kubectlHelper;
+
+        public RabbitDeploymentManager(RabbitDeploymentConfiguration config, IKubectlHelper kubectlHelper)
         {
-            _client = client;
             _config = config;
+            _kubectlHelper = kubectlHelper;
         }
 
         /// <summary>
@@ -32,7 +34,7 @@ namespace NextPipe.Core
         public async Task Init(int lowerBoundaryReplicas, int failureThreshold, int trialsDelaySec, bool recursiveCall = false, bool abortOnFailure = false)
         {
             // Run loop until the infrastructure has been provisioned
-            var rabbitStatefulSetIsRunning = ValidateStatefulsetIsRunning(RABBIT_MQ_DEPLOYMENT);
+            var rabbitStatefulSetIsRunning = _kubectlHelper.ValidateStatefulsetIsRunning(RABBIT_MQ_DEPLOYMENT);
             
             Console.WriteLine($"{nameof(RabbitDeploymentManager)}.{nameof(Init)} --> Validating RabbitMQ infrastructure");
         
@@ -63,7 +65,7 @@ namespace NextPipe.Core
                 }
                 // If multiple replicas of NextPipe exist wait for 30 secs to see if one of the other replicas
                 // has provisioned the infrastructure. If not initiate helm and provision rabbitMQ infrastructure
-                var runningNextPipePods = await GetPodByCustomNameFilter(NEXT_PIPE_DEPLOYMENT, ShellHelper.IdenticalStart);
+                var runningNextPipePods = await _kubectlHelper.GetPodByCustomNameFilter(NEXT_PIPE_DEPLOYMENT, ShellHelper.IdenticalStart);
 
                 if (runningNextPipePods.Count() > 1 && !recursiveCall)
                 {
@@ -85,19 +87,13 @@ namespace NextPipe.Core
             }
         }
 
-        private async Task<IEnumerable<V1Pod>> GetPodByCustomNameFilter(string podName, Func<string,string,bool> podFilter, string nameSpace = "default")
-        {
-            var podList = await _client.ListNamespacedPodWithHttpMessagesAsync(nameSpace);
-            return podList.Body.Items.Where(item => podFilter(item.Metadata.Name, podName));
-        }
-
         private async Task<bool> WaitForLowerBoundaryReplicas(int lowerBoundaryReplicas, int failureThreshold,
             int trialsDelaySec, string statefulsetname, string nameSpace = "default")
         {
             // true as long as none of the constraints are met
             var failedAttempts = 0;
 
-            var readyReplicas = GetNumberOfReadyReplicasRunning(statefulsetname, nameSpace);
+            var readyReplicas = _kubectlHelper.GetNumberOfStatefulsetReadyReplicas(statefulsetname, nameSpace);
             Console.WriteLine($"lowerBoundaryReplicas={lowerBoundaryReplicas}, readyReplicas={readyReplicas}");
 
             if (readyReplicas >= lowerBoundaryReplicas)
@@ -112,7 +108,7 @@ namespace NextPipe.Core
             
             while (true)
             {
-                var rReplicas = GetNumberOfReadyReplicasRunning(statefulsetname, nameSpace);
+                var rReplicas = _kubectlHelper.GetNumberOfStatefulsetReadyReplicas(statefulsetname, nameSpace);
                 if (rReplicas >= lowerBoundaryReplicas)
                 {
                     return true;
@@ -127,29 +123,6 @@ namespace NextPipe.Core
                 Console.WriteLine($"lowerBoundaryReplicas={lowerBoundaryReplicas}, readyReplicas={readyReplicas}. {lowerBoundaryReplicas-readyReplicas} ready replica(s) needed for operations");
                 await Task.Delay(trialsDelaySec.ToMillis());
             }
-        }
-
-        private int GetNumberOfReadyReplicasRunning(string statefulsetName, string nameSpace = "default")
-        {
-            var statefulset = GetStatefulset(statefulsetName, nameSpace);
-
-            if (statefulset == null)
-            {
-                throw new KubeConnectionException($"Trying to fetch ready replicas of statefulset: {statefulsetName} under namespace: {nameSpace}. Statefulset could not be found");
-            }
-
-            return statefulset.Status.ReadyReplicas.GetValueOrDefault();
-        }
-
-        private bool ValidateStatefulsetIsRunning(string statefulsetName, string nameSpace = "default")
-        {
-            return GetStatefulset(statefulsetName, nameSpace) != null;
-        }
-
-        private V1StatefulSet GetStatefulset(string statefulsetName, string nameSpace = "default")
-        {
-            return _client.ListNamespacedStatefulSet(nameSpace).Items
-                .FirstOrDefault(item => item.Metadata.Name == statefulsetName);
         }
     }
 }

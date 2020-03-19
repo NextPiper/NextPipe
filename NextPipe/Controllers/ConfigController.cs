@@ -1,5 +1,7 @@
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using NextPipe.ActionFilters;
 using NextPipe.Core.Commands.Commands;
 using NextPipe.Core.Queries.Queries;
 using NextPipe.Messaging.Infrastructure.Contracts;
@@ -9,6 +11,7 @@ using Serilog;
 namespace NextPipe.Controllers
 {
     [ApiController]
+    [ServiceFilter(typeof(InfrastructureValidationFilter))]
     [Route("core/config")]
     public class ConfigController : BaseController
     {
@@ -20,17 +23,7 @@ namespace NextPipe.Controllers
         [Route("mq")]
         public async Task<IActionResult> RequestMessageQue()
         {
-            var cmdResult = await RouteAsync<TrialCommand, Response>(new TrialCommand());
-            var queryResult = await QueryAsync<TrialQuery, string>(new TrialQuery());
-
-            if (cmdResult.IsSuccessful)
-            {
-                return StatusCode(200);
-            }
-            else
-            {
-                return StatusCode(404);
-            }
+            return StatusCode(200);
         }
     }
 }

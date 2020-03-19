@@ -24,7 +24,7 @@ spec:
           command: ["cp", "/usr/local/bin/kubectl", "/data/kubectl"]
       containers:
       - name: nextpipe-controlplane-container
-        image: nextpipe:2.7
+        image: nextpipe:3.0
         resources:
           limits:
             memory: "128Mi"
@@ -35,3 +35,15 @@ spec:
         - name: kubectl
           subPath: kubectl
           mountPath: /usr/local/bin/kubectl
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextpipe-service
+spec:
+  selector:
+    app: nextpipe-controlplane
+  ports:
+  - port: 5555
+    targetPort: 80
+  type: LoadBalancer

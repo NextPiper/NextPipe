@@ -15,8 +15,8 @@
     <ItemGroup>
       <Folder Include="Domain\KubeDeployment\ValueObjects" />
       <Folder Include="Domain\SharedValueObjects" />
-      <Folder Include="Events\Events" />
       <Folder Include="Events\Handlers" />
+      <Folder Include="Queries\Handlers" />
     </ItemGroup>
 
     <ItemGroup>
