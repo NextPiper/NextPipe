@@ -1,3 +1,4 @@
+using System;
 using Lamar;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -9,7 +10,13 @@ namespace NextPipe.Persistence.PersistenceRegistry
     {
         public PersistenceRegistry()
         {
-            For<IMongoClient>().Use(ctx => new MongoClient(ctx.GetInstance<IOptions<MongoDBPersistenceConfiguration>>().Value.MongoClusterConnectionString)).Singleton();
+            For<IMongoClient>().Use(ctx =>
+            {
+                Console.WriteLine(ctx.GetInstance<IOptions<MongoDBPersistenceConfiguration>>().Value
+                    .MongoClusterConnectionString);
+                return new MongoClient(ctx.GetInstance<IOptions<MongoDBPersistenceConfiguration>>().Value
+                        .MongoClusterConnectionString);
+            }).Singleton();
             
             Scan(scanner =>
             {

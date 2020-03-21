@@ -12,7 +12,7 @@ namespace NextPipe.Core.Commands.Commands.StartupCommands
         public ReplicaFailureThreshold ReplicaFailureThreshold { get; }
         public ReplicaDelaySeconds ReplicaDelaySeconds { get; }
 
-        public RequestInitializeInfrastructure(int lowerBoundaryReadyReplicas, int replicaFailureThreshold, int replicaDelaySeconds)
+        public RequestInitializeInfrastructure(int lowerBoundaryReadyReplicas = 2, int replicaFailureThreshold = 6, int replicaDelaySeconds = 30)
         {
             LowerBoundaryReadyReplicas = new LowerBoundaryReadyReplicas(lowerBoundaryReadyReplicas);
             ReplicaFailureThreshold = new ReplicaFailureThreshold(replicaFailureThreshold);

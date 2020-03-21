@@ -8,7 +8,7 @@ namespace NextPipe.Utilities.Core
         public static string Bash(this string cmd, bool logVerbose = false)
         {
             var escapedArgs = cmd.Replace("\"", "\\\"");
-            
+            Console.WriteLine($"Executing: {cmd} - at: {DateTime.Now.Second}");
             var process = new Process()
             {
                 StartInfo = new ProcessStartInfo

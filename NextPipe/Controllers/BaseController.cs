@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using NextPipe.Core.Queries.Queries;
 using NextPipe.Messaging.Infrastructure.Contracts;
 using NextPipe.Utilities.Documents.Responses;
 using Serilog;
@@ -30,16 +31,26 @@ namespace NextPipe.Controllers
             return await _commandRouter.RouteAsync<TCommand, TResponse>(cmd);
         }
 
-        protected IActionResult ReadDefaultResponse(Response response, int statusCode = 500)
+        protected IActionResult ReadDefaultResponse(Response response, int succesCode = 200, int failureCode = 500)
         {
             if (response.IsSuccessful)
             {
-                return StatusCode(200);
+                return StatusCode(succesCode);
             }
             else
             {
-                return StatusCode(statusCode, response.Message);
+                return StatusCode(failureCode, response.Message);
             }
+        }
+
+        protected IActionResult ReadDefaultQuery<TResult>(TResult result)
+        {
+            if (result != null)
+            {
+                return new ObjectResult(result);
+            }
+
+            return StatusCode(404);
         }
     }
 }

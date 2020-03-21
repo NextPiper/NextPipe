@@ -1,8 +1,16 @@
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using AutoMapper.Configuration.Annotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using NextPipe.Core.Commands.Commands.StartupCommands;
+using NextPipe.Core.Kubernetes;
+using NextPipe.Core.Queries.Queries;
 using NextPipe.Messaging.Infrastructure.Contracts;
+using NextPipe.Persistence.Configuration;
+using NextPipe.Persistence.Entities;
+using NextPipe.Utilities.Core;
 using NextPipe.Utilities.Documents.Responses;
 using Serilog;
 
@@ -12,8 +20,13 @@ namespace NextPipe.Controllers
     [Route("core/tasks")]
     public class TasksController : BaseController
     {
-        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter) : base(logger, queryRouter, commandRouter)
+        public IOptions<MongoDBPersistenceConfiguration> Conf { get; }
+        private readonly IKubectlHelper _kubectlHelper;
+
+        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter, IKubectlHelper kubectlHelper, IOptions<MongoDBPersistenceConfiguration> conf) : base(logger, queryRouter, commandRouter)
         {
+            Conf = conf;
+            _kubectlHelper = kubectlHelper;
         }
 
         /// <summary>
@@ -24,9 +37,33 @@ namespace NextPipe.Controllers
         [Route("request-initialize-infrastructure")]
         public async Task<IActionResult> RequestInitializeInfrastructure()
         {
-            var result = await RouteAsync<RequestInitializeInfrastructure, TaskRequestResponse>(new RequestInitializeInfrastructure(2, 6, 30));
+            var result = await RouteAsync<RequestInitializeInfrastructure, TaskRequestResponse>(new RequestInitializeInfrastructure());
 
-            return ReadDefaultResponse(result);
+            if (result.IsSuccessful)
+            {
+                return StatusCode(202, new {monitorUrl = $"core/tasks/{result.Id}", msg = result.Message});
+            }
+
+            return StatusCode(409, result.Message);
+        }
+
+        [HttpGet]
+        [Route("{taskId}")]
+        public async Task<IActionResult> GetTask(Guid taskId)
+        {
+            var result = await QueryAsync<GetTaskByIdQuery, NextPipeTask>(new GetTaskByIdQuery(taskId));
+
+            return ReadDefaultQuery(result);
+        }
+
+        [HttpGet]
+        [Route("")]
+        public async Task<IActionResult> GetTasks(int page = 0, int pageSize = 100)
+        {
+           var result =
+                await QueryAsync<GetTasksPagedQuery, IEnumerable<NextPipeTask>>(new GetTasksPagedQuery(page, pageSize));
+
+            return ReadDefaultQuery(result);
         }
     }
 }

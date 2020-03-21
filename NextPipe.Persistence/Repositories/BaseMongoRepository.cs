@@ -75,7 +75,7 @@ namespace NextPipe.Persistence.Repositories
             return await Collection().Find(entity => entity.Id == id).SingleOrDefaultAsync();
         }
 
-        public async Task<Guid> Insert(TEntity entity)
+        public virtual async Task<Guid> Insert(TEntity entity)
         {
             await Collection().InsertOneAsync(entity, new InsertOneOptions());
 

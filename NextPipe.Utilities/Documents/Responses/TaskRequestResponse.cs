@@ -4,8 +4,26 @@ namespace NextPipe.Utilities.Documents.Responses
 {
     public class TaskRequestResponse : IdResponse
     {
-        public TaskRequestResponse(Guid id, bool isSuccessful = true, Exception exception = null) : base(id, isSuccessful, exception)
+        public string Message { get; }
+
+        public TaskRequestResponse(IFormattable id, string message, bool isSuccessful = true, Exception exception = null) : base(id, isSuccessful, exception)
         {
+            Message = message;
+        }
+
+        public static TaskRequestResponse AttachToRunningProcess(IFormattable taskId, string msg)
+        {
+            return new TaskRequestResponse(taskId, msg);
+        }
+
+        public static TaskRequestResponse InfrastructureAlreadyRunning(string msg)
+        {
+            return new TaskRequestResponse(Guid.Empty, msg, false);
+        }
+
+        public static TaskRequestResponse TaskRequestAccepted(IFormattable taskId, string msg)
+        {
+            return new TaskRequestResponse(taskId, msg);
         }
     }
 }

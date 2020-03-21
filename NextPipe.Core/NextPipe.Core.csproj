@@ -13,12 +13,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Domain\KubeDeployment\ValueObjects" />
-      <Folder Include="Events\Handlers" />
-      <Folder Include="Queries\Handlers" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\NextPipe.Messaging.Infrastructure\NextPipe.Messaging.Infrastructure.csproj" />
       <ProjectReference Include="..\NextPipe.Persistence\NextPipe.Persistence.csproj" />
     </ItemGroup>

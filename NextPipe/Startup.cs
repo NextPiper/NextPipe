@@ -15,7 +15,6 @@ using Microsoft.OpenApi.Models;
 using NextPipe.Configuration;
 using NextPipe.Middleware;
 using NextPipe.Registry;
-using NextPipe.Services;
 
 namespace NextPipe
 {
@@ -33,7 +32,11 @@ namespace NextPipe
             services.AddControllers();
             services.IncludeRegistry<LamarRegistry>();
 
-            services.AddHostedService<KubernetesService>();
+            //var container = new Container(services);
+            //container.AssertConfigurationIsValid();
+            
+            
+            //services.AddHostedService<KubernetesService>();
 
             services.AddSwaggerGen(c =>
             {

@@ -1,32 +1,43 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using k8s;
 using k8s.Models;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Options;
+using NextPipe.Core.Configurations;
 using NextPipe.Core.Documents;
+using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
 using NextPipe.Utilities.Core;
+using NextPipe.Utilities.Resources;
 
 namespace NextPipe.Core
 {
     public interface IRabbitDeploymentManager
     {
         bool IsInfrastructureRunning(int lowerBoundaryReadyReplicas);
-        Task Init(IRabbitDeploymentConfiguration config,
-            bool recursiveCall = false, bool abortOnFailure = false);
+        Task Deploy(IRabbitDeploymentManagerConfiguration config);
     }
 
     public class RabbitDeploymentManager : IRabbitDeploymentManager
     {
         private const string RABBIT_MQ_STATEFULSET = "rabbitmq";
-        private const string NEXT_PIPE_DEPLOYMENT = "nextpipe-deployment";
+        private const string RABBIT_MQ_PVC = "data-rabbitmq-";
+        private const string RABBIT_MQ_SERVICE = "rabbitmq-service";
         private readonly IKubectlHelper _kubectlHelper;
+        private readonly IOptions<RabbitMQDeploymentConfiguration> _rabbitConfig;
+        private readonly IHelmManager _helmManager;
+        private readonly ILogHandler _logHandler;
 
-        public RabbitDeploymentManager(IKubectlHelper kubectlHelper)
+        public RabbitDeploymentManager(IKubectlHelper kubectlHelper, IOptions<RabbitMQDeploymentConfiguration> rabbitConfig, IHelmManager helmManager)
         {
             _kubectlHelper = kubectlHelper;
+            _rabbitConfig = rabbitConfig;
+            _helmManager = helmManager;
+            _logHandler = new LogHandler();
         }
     
         /// <summary>
@@ -49,6 +60,7 @@ namespace NextPipe.Core
     
             return false;
         }
+        
         /// <summary>
         /// Validate and or provision the rabbitMQ infrastructure.  
         /// </summary>
@@ -56,85 +68,119 @@ namespace NextPipe.Core
         /// <param name="failureThreshold"></param>
         /// <param name="trialsDelaySec"></param>
         /// <returns></returns>
-        public async Task Init(IRabbitDeploymentConfiguration config, bool recursiveCall = false, bool abortOnFailure = false)
+        public async Task Deploy(IRabbitDeploymentManagerConfiguration config)
         {
-            // Run loop until the infrastructure has been provisioned
+            // Attach taskId and updateCallback to the logHandler
+            _logHandler.AttachTaskIdAndUpdateHandler(config.TaskId, config.UpdateCallback);
+            await Deploy(config, false);
+        }
+
+        private async Task Deploy(IRabbitDeploymentManagerConfiguration config, bool abortOnFailure = false)
+        {
+            // Check if statefulset is already deployed
             var rabbitStatefulSetIsRunning = _kubectlHelper.ValidateStatefulsetIsRunning(RABBIT_MQ_STATEFULSET);
-    
-            Console.WriteLine($"{nameof(RabbitDeploymentManager)}.{nameof(Init)} --> Validating RabbitMQ infrastructure");
-    
+            await _logHandler.WriteLine($"{nameof(RabbitDeploymentManager)}.{nameof(Deploy)} --> Validating RabbitMQ infrastructure", true);
+            
             if (rabbitStatefulSetIsRunning)
             {
-                Console.WriteLine($"RabbitMQ Service deployed --> Checking ready nodes");
-                // Validate that at least lowerBoundaryReplicas are running for availability across the cluster
-                var isClusterReady = await WaitForLowerBoundaryReplicas(config, RABBIT_MQ_STATEFULSET);
-    
-                if (isClusterReady)
-                {
-                    Console.WriteLine(
-                        "Proceed --> The rabbitMQ cluster has been provisioned and lowerBoundaryReplicasMet=true");
-                    // Set up RabbitMQ loadbalancer
-                    // Set up NextPipe-ControlPlane loadbalancer
-                    // Return succesfull once this completes as finished.
-                }
-                else
-                {
-                    Console.WriteLine("Failure --> NextPipe was not able to provision rabbitMQ infrastructure");
-                }
+                await ValidateRabbitMQDeployment(config);
             }
             else
             {
+                
                 if (abortOnFailure)
                 {
-                    Console.WriteLine("Failure --> NextPipe failed to setup cluster see logs!");
+                    await Cleanup();
+                    await config.FailureCallback(config.TaskId, _logHandler);
+                    return;
                 }
-    
-                // If multiple replicas of NextPipe exist wait for 30 secs to see if one of the other replicas
-                // has provisioned the infrastructure. If not initiate helm and provision rabbitMQ infrastructure
-                var runningNextPipePods =
-                    await _kubectlHelper.GetPodByCustomNameFilter(NEXT_PIPE_DEPLOYMENT, ShellHelper.IdenticalStart);
-    
-                if (runningNextPipePods.Count() > 1 && !recursiveCall)
-                {
-                    // Another NextPipe pod is already running, wait to see if it has taken initiative 
-                    await Task.Delay(30.ToMillis());
-    
-                    // Call everything again this time provision the infrastructure if it is still not up yet
-                    await Init(config, true);
-                }
-    
-                Console.WriteLine("No existing RabbitMQ infrastructure --> Provision RabbitMQ infrastructure");
-                var helmManager = new HelmManager();
-                helmManager.InstallHelm(true);
-                helmManager.InstallRabbitMQ(true);
-                await Task.Delay(30.ToMillis());
+
+                await InstallHelm();
                 // Once helm has installed and rabbitMQ has been provisioned to the cluster by helm retry the init call
                 // else abort the process...
-                await Init(config, true, true);
+                await Deploy(config, true);
             }
         }
-    
-        private async Task<bool> WaitForLowerBoundaryReplicas(IRabbitDeploymentConfiguration config, string statefulsetname, string nameSpace = "default")
+
+        /// <summary>
+        /// Returns true if we 
+        /// </summary>
+        /// <returns></returns>
+        private async Task CreateRabbitMQService()
+        {
+            if (_rabbitConfig.Value.IsRabbitServiceEnabled)
+            {
+                await _logHandler.WriteLine("Installing RabbitMQ Load Balancer Service", true);
+                await _kubectlHelper.InstallService(KubectlHelper.GetRabbitMQService());
+            }
+        }
+
+        private async Task Cleanup()
+        {
+            // Uninstall helm
+            _helmManager.CleanUp(RABBIT_MQ_STATEFULSET, _logHandler, true);
+            
+            // Uninstall rabbitmq service
+            await _logHandler.WriteLine("Removing RabbitMQ Loadbalancer Service",true);
+            await _kubectlHelper.DeleteService(RABBIT_MQ_SERVICE);
+            
+            // Clean-up pvc!
+            _logHandler.WriteLine("Cleaning Persistent Volume Claims from rabbitMQ", true);
+            var pvcList = await _kubectlHelper.GetPVCsByCustomerNameFilter(RABBIT_MQ_PVC, ShellHelper.IdenticalStart);
+            foreach (var pvc in pvcList)
+            {
+                _logHandler.WriteLine($"Deleting PVC: {pvc.Metadata.Name}");
+            }
+            await _kubectlHelper.DeletePVCList(pvcList);
+        }
+
+        private async Task InstallHelm()
+        {
+            await _logHandler.WriteLine("No existing RabbitMQ infrastructure --> Provision RabbitMQ infrastructure", true);
+            _helmManager.InstallHelm(_logHandler, true);
+            _helmManager.InstallRabbitMQ(RABBIT_MQ_STATEFULSET, _logHandler, true);
+            await Task.Delay(30.ToMillis());
+        }
+
+        private async Task ValidateRabbitMQDeployment(IRabbitDeploymentManagerConfiguration config)
+        {
+            await _logHandler.WriteLine($"RabbitMQ Service deployed --> Checking ready nodes", true);
+            // Validate that at least lowerBoundaryReplicas are running for availability across the cluster
+            var isClusterReady = await WaitForLowerBoundaryReplicas(config, RABBIT_MQ_STATEFULSET);
+            if (isClusterReady)
+            {
+                await _logHandler.WriteLine("RabbitMQ Cluster is ready --> The rabbitMQ cluster has been provisioned and lowerBoundaryReplicasMet=true", true);
+                await CreateRabbitMQService();
+                await config.SuccessCallback(config.TaskId, _logHandler);
+            }
+            else
+            {
+                await Cleanup();
+                await config.FailureCallback(config.TaskId, _logHandler);
+            }
+        }
+        
+        private async Task<bool> WaitForLowerBoundaryReplicas(IRabbitDeploymentManagerConfiguration config, string statefulSetname, string nameSpace = "default")
         {
             // true as long as none of the constraints are met
             var failedAttempts = 0;
     
-            var readyReplicas = _kubectlHelper.GetNumberOfStatefulsetReadyReplicas(statefulsetname, nameSpace);
-            Console.WriteLine($"lowerBoundaryReplicas={config.LowerBoundaryReadyReplicas}, readyReplicas={readyReplicas}");
-    
+            var readyReplicas = _kubectlHelper.GetNumberOfStatefulsetReadyReplicas(statefulSetname, nameSpace);
+            await _logHandler.WriteLine($"lowerBoundaryReplicas={config.LowerBoundaryReadyReplicas}, readyReplicas={readyReplicas}", true);
+            
             if (readyReplicas >= config.LowerBoundaryReadyReplicas)
             {
                 return true;
             }
     
-            Console.WriteLine("Waiting for ready replicas...");
+            await _logHandler.WriteLine("Waiting for ready replicas...", true);
     
             // Wait the initial delay
             await Task.Delay(config.ReplicaDelaySeconds.ToMillis());
     
             while (true)
             {
-                var rReplicas = _kubectlHelper.GetNumberOfStatefulsetReadyReplicas(statefulsetname, nameSpace);
+                var rReplicas = _kubectlHelper.GetNumberOfStatefulsetReadyReplicas(statefulSetname, nameSpace);
                 if (rReplicas >= config.LowerBoundaryReadyReplicas)
                 {
                     return true;
@@ -147,8 +193,7 @@ namespace NextPipe.Core
                     return false;
                 }
     
-                Console.WriteLine(
-                    $"lowerBoundaryReplicas={config.LowerBoundaryReadyReplicas}, readyReplicas={readyReplicas}. {config.LowerBoundaryReadyReplicas - readyReplicas} ready replica(s) needed for operations");
+                await _logHandler.WriteLine($"lowerBoundaryReplicas={config.LowerBoundaryReadyReplicas}, readyReplicas={readyReplicas}. {config.LowerBoundaryReadyReplicas - readyReplicas} ready replica(s) needed for operations", true);
                 await Task.Delay(config.ReplicaDelaySeconds.ToMillis());
             }
         }
