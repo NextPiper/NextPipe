@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using NextPipe.Core.Commands.Commands.ModuleCommands;
 using NextPipe.Core.Commands.Commands.StartupCommands;
+using NextPipe.Core.Domain.Module.ValueObjects;
 using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
 using NextPipe.Core.Queries.Queries;
@@ -22,15 +23,9 @@ namespace NextPipe.Controllers
     [Route("core/tasks")]
     public class TasksController : BaseController
     {
-        public IOptions<MongoDBPersistenceConfiguration> Conf { get; }
-        public ILogHandler Handler { get; }
-        private readonly IKubectlHelper _kubectlHelper;
-
-        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter, IKubectlHelper kubectlHelper, IOptions<MongoDBPersistenceConfiguration> conf, ILogHandler handler) : base(logger, queryRouter, commandRouter)
+        
+        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter) : base(logger, queryRouter, commandRouter)
         {
-            Conf = conf;
-            Handler = handler;
-            _kubectlHelper = kubectlHelper;
         }
 
         /// <summary>
@@ -64,18 +59,10 @@ namespace NextPipe.Controllers
         [Route("")]
         public async Task<IActionResult> GetTasks(int page = 0, int pageSize = 100)
         {
-           /*var result =
-                await QueryAsync<GetTasksPagedQuery, IEnumerable<NextPipeTask>>(new GetTasksPagedQuery(page, pageSize));*/
+           var result =
+                await QueryAsync<GetTasksPagedQuery, IEnumerable<NextPipeTask>>(new GetTasksPagedQuery(page, pageSize));
 
-           Handler.WriteLine("Hello");
-           Handler.WriteLine("Heya");
-           Console.WriteLine(Handler.GetLastUpdate());
-           Handler.WriteLine("Yup");
-           Console.WriteLine(Handler.GetLastWrite());
-            
-            
-            
-            return ReadDefaultQuery("hello");
+            return ReadDefaultQuery(result);
         }
         
         [HttpPost]
@@ -93,6 +80,5 @@ namespace NextPipe.Controllers
             
             return StatusCode(409, result.Message); 
         }
-
     }
 }
