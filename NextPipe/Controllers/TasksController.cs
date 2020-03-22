@@ -76,5 +76,13 @@ namespace NextPipe.Controllers
             
             return ReadDefaultQuery("hello");
         }
+        
+        [HttpPost]
+        [Route("request-module-install")]
+        public async Task<IActionResult> RequestInstallModule(string imagename, int amountofreplicas, string modulename)
+        {
+            return StatusCode(200); 
+        }
+
     }
 }
