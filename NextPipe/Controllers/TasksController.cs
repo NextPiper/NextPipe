@@ -22,15 +22,9 @@ namespace NextPipe.Controllers
     [Route("core/tasks")]
     public class TasksController : BaseController
     {
-        public IOptions<MongoDBPersistenceConfiguration> Conf { get; }
-        public ILogHandler Handler { get; }
-        private readonly IKubectlHelper _kubectlHelper;
-
-        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter, IKubectlHelper kubectlHelper, IOptions<MongoDBPersistenceConfiguration> conf, ILogHandler handler) : base(logger, queryRouter, commandRouter)
+        
+        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter) : base(logger, queryRouter, commandRouter)
         {
-            Conf = conf;
-            Handler = handler;
-            _kubectlHelper = kubectlHelper;
         }
 
         /// <summary>
