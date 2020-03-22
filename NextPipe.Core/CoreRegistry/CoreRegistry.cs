@@ -1,5 +1,6 @@
 using k8s;
 using Lamar;
+using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
 using NextPipe.Messaging.Infrastructure.Registry;
 using NextPipe.Persistence.PersistenceRegistry;
@@ -15,6 +16,7 @@ namespace NextPipe.Core.CoreRegistry
             For<IKubectlHelper>().Use<KubectlHelper>();
             For<IRabbitDeploymentManager>().Use<RabbitDeploymentManager>();
             For<IHelmManager>().Use<HelmManager>();
+            For<ILogHandler>().Use<LogHandler>();
             
             IncludeRegistry<MessagingInfrastructureRegistry>();
             IncludeRegistry<PersistenceRegistry>();

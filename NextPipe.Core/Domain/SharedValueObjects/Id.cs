@@ -14,7 +14,6 @@ namespace NextPipe.Core.Domain.SharedValueObjects
             {
                 throw new ArgumentException($"typeOf {nameof(Id)} can't be instantiated with type Guid.Empty or null");
             }
-
         }
     }
 }

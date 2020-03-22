@@ -5,6 +5,7 @@ using AutoMapper.Configuration.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using NextPipe.Core.Commands.Commands.StartupCommands;
+using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
 using NextPipe.Core.Queries.Queries;
 using NextPipe.Messaging.Infrastructure.Contracts;
@@ -21,11 +22,13 @@ namespace NextPipe.Controllers
     public class TasksController : BaseController
     {
         public IOptions<MongoDBPersistenceConfiguration> Conf { get; }
+        public ILogHandler Handler { get; }
         private readonly IKubectlHelper _kubectlHelper;
 
-        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter, IKubectlHelper kubectlHelper, IOptions<MongoDBPersistenceConfiguration> conf) : base(logger, queryRouter, commandRouter)
+        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter, IKubectlHelper kubectlHelper, IOptions<MongoDBPersistenceConfiguration> conf, ILogHandler handler) : base(logger, queryRouter, commandRouter)
         {
             Conf = conf;
+            Handler = handler;
             _kubectlHelper = kubectlHelper;
         }
 
@@ -60,10 +63,18 @@ namespace NextPipe.Controllers
         [Route("")]
         public async Task<IActionResult> GetTasks(int page = 0, int pageSize = 100)
         {
-           var result =
-                await QueryAsync<GetTasksPagedQuery, IEnumerable<NextPipeTask>>(new GetTasksPagedQuery(page, pageSize));
+           /*var result =
+                await QueryAsync<GetTasksPagedQuery, IEnumerable<NextPipeTask>>(new GetTasksPagedQuery(page, pageSize));*/
 
-            return ReadDefaultQuery(result);
+           Handler.WriteLine("Hello");
+           Handler.WriteLine("Heya");
+           Console.WriteLine(Handler.GetLastUpdate());
+           Handler.WriteLine("Yup");
+           Console.WriteLine(Handler.GetLastWrite());
+            
+            
+            
+            return ReadDefaultQuery("hello");
         }
     }
 }

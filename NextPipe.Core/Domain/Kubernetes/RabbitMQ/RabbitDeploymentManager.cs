@@ -87,7 +87,6 @@ namespace NextPipe.Core
             }
             else
             {
-                
                 if (abortOnFailure)
                 {
                     await Cleanup();
