@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using AutoMapper.Configuration.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using NextPipe.Core.Commands.Commands.ModuleCommands;
 using NextPipe.Core.Commands.Commands.StartupCommands;
 using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
@@ -79,9 +80,18 @@ namespace NextPipe.Controllers
         
         [HttpPost]
         [Route("request-module-install")]
-        public async Task<IActionResult> RequestInstallModule(string imagename, int amountofreplicas, string modulename)
+        public async Task<IActionResult> RequestInstallModule(string imageName, int amountOfReplicas, string moduleName)
         {
-            return StatusCode(200); 
+            var result =
+                await RouteAsync<RequestInstallModule, TaskRequestResponse>(
+                    new RequestInstallModule(imageName, amountOfReplicas, moduleName));
+            
+            if (result.IsSuccessful)
+            {
+                return StatusCode(202, new {monitorUrl = $"core/tasks/{result.Id}", msg = result.Message});
+            }
+            
+            return StatusCode(409, result.Message); 
         }
 
     }
