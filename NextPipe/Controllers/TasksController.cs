@@ -5,6 +5,7 @@ using AutoMapper.Configuration.Annotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using NextPipe.Core.Commands.Commands.StartupCommands;
+using NextPipe.Core.Domain.Module.ValueObjects;
 using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
 using NextPipe.Core.Queries.Queries;
@@ -63,18 +64,10 @@ namespace NextPipe.Controllers
         [Route("")]
         public async Task<IActionResult> GetTasks(int page = 0, int pageSize = 100)
         {
-           /*var result =
-                await QueryAsync<GetTasksPagedQuery, IEnumerable<NextPipeTask>>(new GetTasksPagedQuery(page, pageSize));*/
+           var result =
+                await QueryAsync<GetTasksPagedQuery, IEnumerable<NextPipeTask>>(new GetTasksPagedQuery(page, pageSize));
 
-           Handler.WriteLine("Hello");
-           Handler.WriteLine("Heya");
-           Console.WriteLine(Handler.GetLastUpdate());
-           Handler.WriteLine("Yup");
-           Console.WriteLine(Handler.GetLastWrite());
-            
-            
-            
-            return ReadDefaultQuery("hello");
+            return ReadDefaultQuery(result);
         }
         
         [HttpPost]
@@ -83,6 +76,5 @@ namespace NextPipe.Controllers
         {
             return StatusCode(200); 
         }
-
     }
 }
