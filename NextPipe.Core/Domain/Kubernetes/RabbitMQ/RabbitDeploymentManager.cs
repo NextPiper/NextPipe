@@ -20,7 +20,7 @@ namespace NextPipe.Core
     {
         bool IsInfrastructureRunning(int lowerBoundaryReadyReplicas);
         Task Deploy(IRabbitDeploymentManagerConfiguration config);
-        Task Cleanup(Func<Id, ILogHandler, Task> successHandler, Func<Id, ILogHandler, Task> failureHandler, bool verboseLogging = false);
+        Task Cleanup(Id taskId, Func<Id, ILogHandler, Task> successHandler, Func<Id, ILogHandler, Task> failureHandler, bool verboseLogging = false);
         void AttachTaskIdAndUpdateHandler(Id taskId, Func<Id, ILogHandler, Task> updateHandler);
         void SetVerboseLogging(bool verboseLogging);
     }
@@ -134,9 +134,29 @@ namespace NextPipe.Core
             }
         }
         
-        public async Task Cleanup(Func<Id, ILogHandler, Task> successHandler, Func<Id, ILogHandler, Task> failureHandler, bool verboseLogging = false)
+        public async Task Cleanup(Id taskId, Func<Id, ILogHandler, Task> successHandler, Func<Id, ILogHandler, Task> failureHandler, bool verboseLogging = false)
         {
             await _logHandler.WriteCmd($"{nameof(RabbitDeploymentManager)}.{nameof(Cleanup)}", verboseLogging);
+            
+            // Uninstall helm
+            await _helmManager.CleanUp(RABBIT_MQ_STATEFULSET, _logHandler, verboseLogging);
+            
+            // Uninstall rabbitmq service
+            await _logHandler.WriteCmd($"{nameof(_kubectlHelper)}.{nameof(KubectlHelper.DeleteService)}({RABBIT_MQ_SERVICE})",verboseLogging);
+            var result = await _kubectlHelper.DeleteService(RABBIT_MQ_SERVICE);
+            await _logHandler.WriteLine(result, verboseLogging);
+            
+            // Clean-up pvc!
+            await _logHandler.WriteCmd($"{nameof(KubectlHelper)}.{nameof(KubectlHelper.DeletePVCList)}", verboseLogging);
+            await _logHandler.WriteLine("Cleaning Persistent Volume Claims from rabbitMQ", verboseLogging);
+            var pvcList = await _kubectlHelper.GetPVCsByCustomerNameFilter(RABBIT_MQ_PVC, ShellHelper.IdenticalStart);
+            foreach (var pvc in pvcList)
+            {
+                await _logHandler.WriteLine($"Deleting PVC: {pvc.Metadata.Name}", verboseLogging);
+            }
+            await _kubectlHelper.DeletePVCList(pvcList);
+
+            await successHandler(taskId, _logHandler);
         }
 
         private async Task Cleanup()
