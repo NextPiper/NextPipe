@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Conventions;
 using MongoDB.Driver;
 using NextPipe.Persistence.Configuration;
 using NextPipe.Persistence.Entities;
@@ -38,6 +39,13 @@ namespace NextPipe.Persistence.Repositories
             {
                 Database.CreateCollection(CollectionName);
             }
+            
+            // Apply enum string conventionpack
+            var pack = new ConventionPack
+            {
+                new EnumRepresentationConvention(BsonType.String)
+            };
+            ConventionRegistry.Register("EnumStringConvention", pack, t => true);
         }
 
         private bool CollectionExists(IMongoDatabase db, string collectionName)
