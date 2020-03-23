@@ -23,9 +23,9 @@ namespace NextPipe.Core.Events.Handlers
         private readonly IModuleRepository _moduleRepository;
         private readonly IModuleInstallManager _moduleInstallManager;
 
-        public TasksEventHandler(ITasksRepository _tasksRepository, IRabbitDeploymentManager rabbitDeploymentManager, IModuleRepository moduleRepository)
+        public TasksEventHandler(ITasksRepository tasksRepository, IRabbitDeploymentManager rabbitDeploymentManager, IModuleRepository moduleRepository)
         {
-            this._tasksRepository = _tasksRepository;
+            _tasksRepository = tasksRepository;
             _rabbitDeploymentManager = rabbitDeploymentManager;
             _moduleRepository = moduleRepository;
         }
