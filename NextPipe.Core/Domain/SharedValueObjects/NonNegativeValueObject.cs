@@ -19,7 +19,7 @@ namespace NextPipe.Core.Domain.SharedValueObjects
                 var intV = Convert.ToInt32(value);
                 if (intV < 0)
                 {
-                    return false;
+                    return true;
                 }
             }
             if (value is float)
@@ -27,7 +27,7 @@ namespace NextPipe.Core.Domain.SharedValueObjects
                 var intV = Convert.ToSingle(value);
                 if (intV < 0)
                 {
-                    return false;
+                    return true;
                 } 
             }
             if (value is double)
@@ -35,7 +35,7 @@ namespace NextPipe.Core.Domain.SharedValueObjects
                 var intV = Convert.ToDouble(value);
                 if (intV < 0)
                 {
-                    return false;
+                    return true;
                 } 
             }
             if (value is long)
@@ -43,10 +43,10 @@ namespace NextPipe.Core.Domain.SharedValueObjects
                 var intV = Convert.ToInt64(value);
                 if (intV < 0)
                 {
-                    return false;
+                    return true;
                 }
             }
-            return true;
+            return false;
         }
     }
 }

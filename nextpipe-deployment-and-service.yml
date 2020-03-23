@@ -1,14 +1,14 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: Nextpipe-deployment
+  name: nextpipe-deployment
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: nextpipe-controlplane
   template:
-    metadata:
+    metadata: 
       labels:
         app: nextpipe-controlplane
     spec:
@@ -24,10 +24,10 @@ spec:
           command: ["cp", "/usr/local/bin/kubectl", "/data/kubectl"]
       containers:
       - name: nextpipe-controlplane-container
-        image: nextpipe:6.2
+        image: nextpipe:6.9
         resources:
           limits:
-            memory: "128Mi"
+            memory: "256Mi"
             cpu: "500m"
         ports:
         - containerPort: 80

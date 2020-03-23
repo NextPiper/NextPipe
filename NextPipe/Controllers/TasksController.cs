@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using AutoMapper.Configuration.Annotations;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using NextPipe.Core.Commands.Commands.StartupCommands;
 using NextPipe.Core.Domain.Module.ValueObjects;
 using NextPipe.Core.Helpers;
@@ -12,8 +9,9 @@ using NextPipe.Core.Queries.Queries;
 using NextPipe.Messaging.Infrastructure.Contracts;
 using NextPipe.Persistence.Configuration;
 using NextPipe.Persistence.Entities;
-using NextPipe.Utilities.Core;
 using NextPipe.Utilities.Documents.Responses;
+using Microsoft.AspNetCore.Mvc;
+using NextPipe.Core.ValueObjects;
 using Serilog;
 
 namespace NextPipe.Controllers
@@ -22,9 +20,13 @@ namespace NextPipe.Controllers
     [Route("core/tasks")]
     public class TasksController : BaseController
     {
-        
-        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter) : base(logger, queryRouter, commandRouter)
+        private readonly ILogHandler _logHandler;
+        private readonly IKubectlHelper _kubectlHelper;
+
+        public TasksController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter, ILogHandler logHandler, IKubectlHelper kubectlHelper) : base(logger, queryRouter, commandRouter)
         {
+            _logHandler = logHandler;
+            _kubectlHelper = kubectlHelper;
         }
 
         /// <summary>
@@ -45,6 +47,13 @@ namespace NextPipe.Controllers
             return StatusCode(409, result.Message);
         }
 
+        [HttpPost]
+        [Route("request-uninstall-infrastructure")]
+        public async Task<IActionResult> RequestUninstallInfrastructure()
+        {
+            return new ObjectResult("");
+        }
+        
         [HttpGet]
         [Route("{taskId}")]
         public async Task<IActionResult> GetTask(Guid taskId)

@@ -11,14 +11,16 @@ namespace NextPipe.Core.Events.Events
         public LowerBoundaryReadyReplicas LowerBoundaryReadyReplicas { get; }
         public ReplicaFailureThreshold ReplicaFailureThreshold { get; }
         public ReplicaDelaySeconds ReplicaDelaySeconds { get; }
+        public RabbitNumberOfReplicas RabbitNumberOfReplicas { get; }
 
 
-        public InitializeInfrastructureTaskRequestEvent(Id taskId, LowerBoundaryReadyReplicas lowerBoundaryReadyReplicas, ReplicaFailureThreshold replicaFailureThreshold, ReplicaDelaySeconds replicaDelaySeconds)
+        public InitializeInfrastructureTaskRequestEvent(Id taskId, LowerBoundaryReadyReplicas lowerBoundaryReadyReplicas, ReplicaFailureThreshold replicaFailureThreshold, ReplicaDelaySeconds replicaDelaySeconds, RabbitNumberOfReplicas rabbitNumberOfReplicas)
         {
             TaskId = taskId;
             LowerBoundaryReadyReplicas = lowerBoundaryReadyReplicas;
             ReplicaFailureThreshold = replicaFailureThreshold;
             ReplicaDelaySeconds = replicaDelaySeconds;
+            RabbitNumberOfReplicas = rabbitNumberOfReplicas;
         }
     }
 }

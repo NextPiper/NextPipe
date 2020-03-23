@@ -16,7 +16,8 @@ using TaskStatus = NextPipe.Persistence.Entities.TaskStatus;
 namespace NextPipe.Core.Commands.Handlers
 {
     public class StartupCommandHandler : CommandHandlerBase,
-        ICommandHandler<RequestInitializeInfrastructure, TaskRequestResponse>
+        ICommandHandler<RequestInitializeInfrastructure, TaskRequestResponse>,
+        ICommandHandler<RequestUninstallInfrastructure, TaskRequestResponse>
     {
         private readonly ITasksRepository _tasksRepository;
         private readonly IRabbitDeploymentManager _rabbitDeploymentManager;
@@ -37,7 +38,8 @@ namespace NextPipe.Core.Commands.Handlers
                 if (result.FirstOrDefault().QueueStatus != QueueStatus.Completed)
                 {
                     // This means that there is a RabbitInfrastructureDeploy type which is either pending or running. Reply with an AttachingToProcess msg
-                    return TaskRequestResponse.AttachToRunningProcess(result.FirstOrDefault().TaskId, $"Task already queued with {nameof(QueueStatus)}={result.FirstOrDefault().QueueStatus}, attaching to task");
+                    return TaskRequestResponse.AttachToRunningProcess(result.FirstOrDefault().TaskId,
+                        $"Task already queued with {nameof(QueueStatus)}={result.FirstOrDefault().QueueStatus}, attaching to task");
                 }
             }
             
@@ -56,19 +58,54 @@ namespace NextPipe.Core.Commands.Handlers
             {
                 CreatedAt = DateTime.Now,
                 EditedAt = DateTime.Now,
-                Id = Guid.NewGuid(),
+                Id = new Id().Value,
                 QueueStatus = QueueStatus.Pending,
                 TaskId = taskId.Value,
                 TaskStatus = TaskStatus.Ready,
                 TaskPriority = TaskPriority.Fatal,
-                TaskType = TaskType.RabbitInfrastructureDeploy
+                TaskType = TaskType.RabbitInfrastructureDeploy,
+                Logs = ""
             });
 
             _eventPublisher.PublishAsync(new InitializeInfrastructureTaskRequestEvent(taskId,
                 cmd.LowerBoundaryReadyReplicas, cmd.ReplicaFailureThreshold,
-                cmd.ReplicaDelaySeconds));
+                cmd.ReplicaDelaySeconds, cmd.RabbitNumberOfReplicas));
 
             return TaskRequestResponse.TaskRequestAccepted(taskId.Value, "Infrastructure Initialize Request Accepted");
+        }
+
+        public async Task<TaskRequestResponse> HandleAsync(RequestUninstallInfrastructure cmd, CancellationToken ct)
+        {
+            // Check if there is already a task running
+            var result = await _tasksRepository.GetTasksByTaskType(TaskType.RabbitInfrastructureUninstall);
+            if (result.Any())
+            {
+                if (result.FirstOrDefault().QueueStatus != QueueStatus.Completed)
+                {
+                    // A cleanup task is already running attach to that task instead
+                    return TaskRequestResponse.AttachToRunningProcess(result.FirstOrDefault().TaskId,
+                        $"Task already queued with {nameof(QueueStatus)}={result.FirstOrDefault().QueueStatus}, attaching to task");
+                }
+            }
+            
+            // The task is not running. Queue a task to cleanup the infrastructure
+            var taskId = new Id();
+            await _tasksRepository.Insert(new NextPipeTask
+            {
+                CreatedAt = DateTime.Now,
+                EditedAt = DateTime.Now,
+                Id = new Id().Value,
+                QueueStatus = QueueStatus.Pending,
+                TaskId = taskId.Value,
+                TaskStatus = TaskStatus.Ready,
+                TaskPriority = TaskPriority.Fatal,
+                TaskType = TaskType.RabbitInfrastructureUninstall,
+                Logs = ""
+            });
+
+            _eventPublisher.PublishAsync(new UninstallInfrastructureTaskRequestEvent(taskId));
+
+            return TaskRequestResponse.TaskRequestAccepted(taskId.Value, "Uninstall infrastructure request accepted");
         }
     }
 }

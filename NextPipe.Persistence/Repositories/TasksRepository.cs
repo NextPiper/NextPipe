@@ -24,7 +24,7 @@ namespace NextPipe.Persistence.Repositories
     public class TasksRepository : BaseMongoRepository<NextPipeTask>, ITasksRepository
     {
         public TasksRepository(IMongoClient mongoClient, IOptions<MongoDBPersistenceConfiguration> config) : base(mongoClient, config)
-        {
+        { 
         }
 
         public override async Task<Guid> Insert(NextPipeTask entity)
@@ -37,6 +37,18 @@ namespace NextPipe.Persistence.Repositories
                     if(result.SingleOrDefault().QueueStatus != QueueStatus.Completed)
                         throw new PersistenceException($"Can't Que multiple {nameof(NextPipeTask)} of TaskType {nameof(TaskType.RabbitInfrastructureDeploy)}");
                 } 
+            }
+
+            if (entity.TaskType == TaskType.RabbitInfrastructureUninstall)
+            {
+                var result = await GetTasksByTaskType(TaskType.RabbitInfrastructureUninstall);
+                if (result.Any())
+                {
+                    if (result.SingleOrDefault().QueueStatus != QueueStatus.Completed)
+                    {
+                        throw new PersistenceException($"Can't Que multiple {nameof(NextPipeTask)} of TaskType {nameof(TaskType.RabbitInfrastructureUninstall)}");
+                    }
+                }
             }
             
             await Collection().InsertOneAsync(entity, new InsertOneOptions());

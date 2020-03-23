@@ -7,13 +7,13 @@ using System.Threading.Tasks;
 using k8s;
 using k8s.Models;
 using NextPipe.Core.Documents;
-using NextPipe.Utilities.Core;
 
 namespace NextPipe.Core.Kubernetes
 {
     public interface IKubectlHelper
     {
         V1StatefulSet GetStatefulset(string statefulsetName, string nameSpace = "default");
+        Task<V1Service> GetService(string serviceName, string nameSpace = "default");
         bool ValidateStatefulsetIsRunning(string statefulsetName, string nameSpace = "default");
         int GetNumberOfStatefulsetReadyReplicas(string statefulsetName, string nameSpace = "default");
         Task<IEnumerable<V1Pod>> GetPodsByCustomNameFilter(string podName, Func<string, string, bool> podFilter,
@@ -22,7 +22,7 @@ namespace NextPipe.Core.Kubernetes
             Func<string, string, bool> pvcFilter, string nameSpace = "default");
         Task DeletePVCList(IEnumerable<V1PersistentVolumeClaim> pvcList, string nameSpace = "default");
         Task InstallService(V1Service service, string nameSpace = "default");
-        Task DeleteService(string name, string nameSpace = "default");
+        Task<string> DeleteService(string name, string nameSpace = "default");
 
     }
     
@@ -39,6 +39,13 @@ namespace NextPipe.Core.Kubernetes
         {
             return _client.ListNamespacedStatefulSet(nameSpace).Items
                 .FirstOrDefault(item => item.Metadata.Name == statefulsetName);
+        }
+
+        public async Task<V1Service> GetService(string serviceName, string nameSpace = "default")
+        {
+            var result = await _client.ListNamespacedServiceWithHttpMessagesAsync(nameSpace);
+
+            return result.Body.Items.SingleOrDefault(t => t.Metadata.Name == serviceName);
         }
 
         public bool ValidateStatefulsetIsRunning(string statefulsetName, string nameSpace = "default")
@@ -80,12 +87,18 @@ namespace NextPipe.Core.Kubernetes
 
         public async Task InstallService(V1Service service, string nameSpace = "default")
         {
-            await _client.CreateNamespacedServiceWithHttpMessagesAsync(service, nameSpace);
+            var runningService = await GetService("rabbitmq-service", nameSpace);
+            
+            if (runningService == null)
+            {
+                await _client.CreateNamespacedServiceWithHttpMessagesAsync(service, nameSpace);
+            }
         }
 
-        public async Task DeleteService(string name, string nameSpace = "default")
+        public async Task<string> DeleteService(string name, string nameSpace = "default")
         {
-            await _client.DeleteNamespacedServiceAsync(name, nameSpace);
+            var result = await _client.DeleteNamespacedServiceAsync(name, nameSpace);
+            return result.Message;
         }
 
         public static string KubectlApplyRabbitService()

@@ -2,6 +2,7 @@ namespace NextPipe.Persistence.Entities
 {
     public enum TaskType
     {
-        RabbitInfrastructureDeploy
+        RabbitInfrastructureDeploy,
+        RabbitInfrastructureUninstall
     }
 }

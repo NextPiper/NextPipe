@@ -11,7 +11,9 @@ using TaskStatus = NextPipe.Persistence.Entities.TaskStatus;
 
 namespace NextPipe.Core.Events.Handlers
 {
-    public class TasksEventHandler : IEventHandler<InitializeInfrastructureTaskRequestEvent>
+    public class TasksEventHandler : 
+        IEventHandler<InitializeInfrastructureTaskRequestEvent>,
+        IEventHandler<UninstallInfrastructureTaskRequestEvent>
     {
         private readonly ITasksRepository _tasksRepository;
         private readonly IRabbitDeploymentManager _rabbitDeploymentManager;
@@ -34,12 +36,26 @@ namespace NextPipe.Core.Events.Handlers
             await _tasksRepository.UpdateTaskQueueStatus(evt.TaskId.Value, QueueStatus.Running);
             await _tasksRepository.UpdateTaskStatus(evt.TaskId.Value, TaskStatus.Running);
             
+            // Make sure the logging is verbose for console prints
+            _rabbitDeploymentManager.SetVerboseLogging(true);
+            
             // Deploy rabbitMQ infrastructure
             await _rabbitDeploymentManager.Deploy(
                 new RabbitDeploymentManagerConfiguration(evt.TaskId, evt.LowerBoundaryReadyReplicas, evt.ReplicaFailureThreshold,
-                    evt.ReplicaDelaySeconds, SuccessCallback, FailureCallback, UpdateCallback));
+                    evt.ReplicaDelaySeconds, evt.RabbitNumberOfReplicas, SuccessCallback, FailureCallback, UpdateCallback));
         }
+        
+        public async Task HandleAsync(UninstallInfrastructureTaskRequestEvent evt, CancellationToken ct)
+        {
+            // Start by updating the que and task status appropriately
+            await _tasksRepository.UpdateTaskQueueStatus(evt.TaskId.Value, QueueStatus.Running);
+            await _tasksRepository.UpdateTaskStatus(evt.TaskId.Value, TaskStatus.Running);
+            
+            _rabbitDeploymentManager.AttachTaskIdAndUpdateHandler(evt.TaskId, UpdateCallback);
 
+            await _rabbitDeploymentManager.Cleanup(SuccessCallback, FailureCallback);
+        }
+        
         private async Task SuccessCallback(Id taskId, ILogHandler logHandler)
         {
             await _tasksRepository.FinishTask(taskId.Value, TaskStatus.Success, logHandler.GetLog());
