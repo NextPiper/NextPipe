@@ -80,6 +80,8 @@ namespace NextPipe.Core.Events.Handlers
         public async Task HandleAsync(InstallModuleTaskRequestEvent evt, CancellationToken ct)
         {
             await _moduleRepository.UpdateModuleStatus(evt.Id.Value, ModuleStatus.Installing);
+            await _tasksRepository.UpdateTaskQueueStatus(evt.Id.Value, QueueStatus.Running);
+            await _tasksRepository.UpdateTaskStatus(evt.Id.Value, TaskStatus.Running);
 
             await _moduleInstallManager.DeployModule(new ModuleInstallManagerConfig(evt.Id, evt.ModuleReplicas,
                 evt.ModuleName, evt.ImageName, SuccessCallback, FailureCallback, UpdateCallback));

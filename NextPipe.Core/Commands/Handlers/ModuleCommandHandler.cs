@@ -5,10 +5,12 @@ using NextPipe.Core.Commands.Commands.ModuleCommands;
 using NextPipe.Core.Domain.SharedValueObjects;
 using NextPipe.Core.Events.Events;
 using NextPipe.Messaging.Infrastructure.Contracts;
+using NextPipe.Persistence.Entities;
 using NextPipe.Persistence.Entities.NextPipeModules;
 using NextPipe.Persistence.Repositories;
 using NextPipe.Utilities.Documents.Responses;
 using SimpleSoft.Mediator;
+using TaskStatus = NextPipe.Persistence.Entities.TaskStatus;
 
 namespace NextPipe.Core.Commands.Handlers
 {
@@ -18,9 +20,10 @@ namespace NextPipe.Core.Commands.Handlers
         private readonly IModuleRepository _moduleRepository;
         private readonly ITasksRepository _tasksRepository;
 
-        public ModuleCommandHandler(IEventPublisher eventPublisher, IModuleRepository moduleRepository, ITasksRepository) : base(eventPublisher)
+        public ModuleCommandHandler(IEventPublisher eventPublisher, IModuleRepository moduleRepository, ITasksRepository tasksRepository) : base(eventPublisher)
         {
             _moduleRepository = moduleRepository;
+            _tasksRepository = tasksRepository;
         }
 
         public async Task<TaskRequestResponse> HandleAsync(RequestInstallModule cmd, CancellationToken ct)
@@ -57,11 +60,24 @@ namespace NextPipe.Core.Commands.Handlers
 
             });
             var taskId = new Id();
-            await 
+            await _tasksRepository.Insert(new NextPipeTask
+            {
+                CreatedAt = DateTime.Now,
+                EditedAt = DateTime.Now,
+                Id = new Id().Value,
+                QueueStatus = QueueStatus.Pending,
+                TaskId = taskId.Value,
+                TaskStatus = TaskStatus.Ready,
+                TaskPriority = TaskPriority.Medium,
+                TaskType = TaskType.ModuleInstall,
+                Logs = "",
+                ReferenceId = moduleId.Value
+
+            });
             
             _eventPublisher.PublishAsync(
-                new InstallModuleTaskRequestEvent(moduleId, cmd.ModuleReplicas, cmd.ImageName, cmd.ModuleName));
-            return TaskRequestResponse.TaskRequestAccepted(moduleId.Value, "Module Installation Request Accepted");
+                new InstallModuleTaskRequestEvent(taskId, cmd.ModuleReplicas, cmd.ImageName, cmd.ModuleName));
+            return TaskRequestResponse.TaskRequestAccepted(taskId.Value, "Module Installation Request Accepted");
 
         }
     }
