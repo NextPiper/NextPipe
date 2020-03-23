@@ -59,7 +59,7 @@ namespace NextPipe.Core.Events.Handlers
             
             _rabbitDeploymentManager.AttachTaskIdAndUpdateHandler(evt.TaskId, UpdateCallback);
 
-            await _rabbitDeploymentManager.Cleanup(SuccessCallback, FailureCallback);
+            await _rabbitDeploymentManager.Cleanup(evt.TaskId, SuccessCallback, FailureCallback, true);
         }
         
         private async Task SuccessCallback(Id taskId, ILogHandler logHandler)
