@@ -23,7 +23,6 @@ namespace NextPipe.Core.Kubernetes
         Task DeletePVCList(IEnumerable<V1PersistentVolumeClaim> pvcList, string nameSpace = "default");
         Task InstallService(V1Service service, string nameSpace = "default");
         Task<string> DeleteService(string name, string nameSpace = "default");
-        Task DeleteService(string name, string nameSpace = "default");
         Task InstallModule(V1Deployment moduleDeployment, string nameSpace = "deafualt");
         Task<V1Deployment> CreateModuleDeployment(string imageName, string moduleName, int moduleReplicas);
 

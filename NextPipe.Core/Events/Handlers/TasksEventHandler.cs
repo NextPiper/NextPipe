@@ -13,9 +13,9 @@ using TaskStatus = NextPipe.Persistence.Entities.TaskStatus;
 
 namespace NextPipe.Core.Events.Handlers
 {
-    public class TasksEventHandler : IEventHandler<InitializeInfrastructureTaskRequestEvent>,IEventHandler<InstallModuleTaskRequestEvent>
     public class TasksEventHandler : 
         IEventHandler<InitializeInfrastructureTaskRequestEvent>,
+        IEventHandler<InstallModuleTaskRequestEvent>,
         IEventHandler<UninstallInfrastructureTaskRequestEvent>
     {
         private readonly ITasksRepository _tasksRepository;
