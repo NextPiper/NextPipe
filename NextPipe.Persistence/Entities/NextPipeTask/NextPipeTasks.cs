@@ -16,6 +16,8 @@ namespace NextPipe.Persistence.Entities
         
         public TaskPriority TaskPriority { get; set; }
         
+        public Guid ReferenceId { get; set; }
+        
         public string Logs { get; set; }
     }
 }

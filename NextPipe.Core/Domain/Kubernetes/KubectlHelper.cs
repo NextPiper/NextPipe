@@ -23,8 +23,8 @@ namespace NextPipe.Core.Kubernetes
         Task DeletePVCList(IEnumerable<V1PersistentVolumeClaim> pvcList, string nameSpace = "default");
         Task InstallService(V1Service service, string nameSpace = "default");
         Task<string> DeleteService(string name, string nameSpace = "default");
-        Task InstallModule(V1Deployment moduleDeployment, string nameSpace = "deafualt");
-        Task<V1Deployment> CreateModuleDeployment(string imageName, string moduleName, int moduleReplicas);
+        Task InstallModule(V1Deployment moduleDeployment, string nameSpace = "default");
+        
 
     }
     
@@ -103,7 +103,7 @@ namespace NextPipe.Core.Kubernetes
             return result.Message;
         }
 
-        public async Task<V1Deployment> CreateModuleDeployment(string imageName, string moduleName, int moduleReplicas)
+        public static V1Deployment CreateModuleDeployment(string imageName, string moduleName, int moduleReplicas)
         {
             return new V1Deployment(
                 "v1",
@@ -151,7 +151,7 @@ namespace NextPipe.Core.Kubernetes
         }
 
 
-        public async Task InstallModule(V1Deployment moduleDeployment, string nameSpace = "deafualt")
+        public async Task InstallModule(V1Deployment moduleDeployment, string nameSpace = "default")
         {
             await _client.CreateNamespacedDeploymentWithHttpMessagesAsync(moduleDeployment, nameSpace);
         }

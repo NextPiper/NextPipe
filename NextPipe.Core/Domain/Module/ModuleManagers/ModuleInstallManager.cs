@@ -24,8 +24,8 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
         }
         public Task DeployModule(IModuleInstallManagerConfig config)
         {
-            var moduleDeployment = _kubectlHelper.CreateModuleDeployment(config.ImageName, config.ModuleName, config.ModuleReplicas);
-            //await _kubectlHelper.InstallModule(moduleDeployment,"");
+            //var moduleDeployment = await KubectlHelper.CreateModuleDeployment(config.ImageName,config.)
+            //await _kubectlHelper.InstallModule(moduleDeployment);
             return null;
         }
         

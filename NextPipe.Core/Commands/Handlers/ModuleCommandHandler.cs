@@ -16,8 +16,9 @@ namespace NextPipe.Core.Commands.Handlers
         ICommandHandler<RequestInstallModule, TaskRequestResponse>
     {
         private readonly IModuleRepository _moduleRepository;
+        private readonly ITasksRepository _tasksRepository;
 
-        public ModuleCommandHandler(IEventPublisher eventPublisher, IModuleRepository moduleRepository) : base(eventPublisher)
+        public ModuleCommandHandler(IEventPublisher eventPublisher, IModuleRepository moduleRepository, ITasksRepository) : base(eventPublisher)
         {
             _moduleRepository = moduleRepository;
         }
@@ -48,12 +49,16 @@ namespace NextPipe.Core.Commands.Handlers
             {
                 CreatedAt = DateTime.Now,
                 EditedAt = DateTime.Now,
-                Id = Guid.NewGuid(),
+                Id = moduleId.Value,
+                ModuleStatus = ModuleStatus.Pending,
                 ImageName = cmd.ImageName.Value,
                 ModuleName = cmd.ModuleName.Value,
                 ModuleReplicas = cmd.ModuleReplicas.Value
 
             });
+            var taskId = new Id();
+            await 
+            
             _eventPublisher.PublishAsync(
                 new InstallModuleTaskRequestEvent(moduleId, cmd.ModuleReplicas, cmd.ImageName, cmd.ModuleName));
             return TaskRequestResponse.TaskRequestAccepted(moduleId.Value, "Module Installation Request Accepted");
