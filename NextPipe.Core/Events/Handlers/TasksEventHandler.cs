@@ -84,7 +84,7 @@ namespace NextPipe.Core.Events.Handlers
             await _tasksRepository.UpdateTaskStatus(evt.Id.Value, TaskStatus.Running);
 
             await _moduleInstallManager.DeployModule(new ModuleInstallManagerConfig(evt.Id, evt.ModuleReplicas,
-                evt.ModuleName, evt.ImageName, SuccessCallback, FailureCallback, UpdateCallback));
+                evt.ModuleName, evt.ImageName, SuccessCallback, FailureCallback, UpdateCallback), true);
         }
     }
 }

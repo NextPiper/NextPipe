@@ -105,21 +105,27 @@ namespace NextPipe.Core.Kubernetes
 
         public static V1Deployment CreateModuleDeployment(string imageName, string moduleName, int moduleReplicas)
         {
-            return new V1Deployment(
-                "v1",
-                "Deployment",
-                new V1ObjectMeta(
-                    name: moduleName,
-                    labels: new Dictionary<string, string> {{"app", moduleName}},
-                    namespaceProperty: "default"),
-                new V1DeploymentSpec
+            return new V1Deployment()
+            {
+                ApiVersion = "apps/v1",
+                Kind = "Deployment",
+                Metadata = new V1ObjectMeta()
+                {
+                    Name = moduleName,
+                    NamespaceProperty = null,
+                    Labels = new Dictionary<string, string>()
+                    {
+                        { "app", moduleName }
+                    }
+                },
+                Spec = new V1DeploymentSpec
                 {
                     Replicas = moduleReplicas,
                     Selector = new V1LabelSelector()
                     {
                         MatchLabels = new Dictionary<string, string>
                         {
-                            {"app", moduleName}
+                            { "app", moduleName }
                         }
                     },
                     Template = new V1PodTemplateSpec()
@@ -129,7 +135,7 @@ namespace NextPipe.Core.Kubernetes
                             CreationTimestamp = null,
                             Labels = new Dictionary<string, string>
                             {
-                                {"app", moduleName}
+                                { "app", moduleName }
                             }
                         },
                         Spec = new V1PodSpec
@@ -138,16 +144,20 @@ namespace NextPipe.Core.Kubernetes
                             {
                                 new V1Container()
                                 {
-                                    Name = imageName,
+                                    Name = moduleName,
                                     Image = imageName,
                                     ImagePullPolicy = "Always",
-                                    Ports = new List<V1ContainerPort> {new V1ContainerPort(80)}
+                                    Ports = new List<V1ContainerPort> { new V1ContainerPort(80) }
                                 }
                             }
                         }
                     }
+                },
+                Status = new V1DeploymentStatus()
+                {
+                    Replicas = 1
                 }
-            );
+            };
         }
 
 

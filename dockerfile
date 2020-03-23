@@ -11,7 +11,7 @@ COPY NextPipe.Persistence/*.csproj ./NextPipe.Persistence/
 COPY NextPipe.Utilities/*.csproj ./NextPipe.Utilities/
 
 # Restore each projects
-RUN dotnet restore
+RUN dotnet restore --packages ./.nuget/packages
 
 # After restore copy all the code and build the App
 COPY NextPipe/. ./NextPipe/
