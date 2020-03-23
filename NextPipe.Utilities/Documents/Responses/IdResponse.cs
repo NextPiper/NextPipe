@@ -4,9 +4,9 @@ namespace NextPipe.Utilities.Documents.Responses
 {
     public class IdResponse : Response
     {
-        public IFormattable Id { get; private set; }
+        public Guid Id { get; private set; }
 
-        public IdResponse(IFormattable id, bool isSuccessful = true, Exception exception = null) : base(isSuccessful, exception)
+        public IdResponse(Guid id, bool isSuccessful = true, Exception exception = null) : base(isSuccessful, exception)
         {
             Id = id;
         }

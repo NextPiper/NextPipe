@@ -23,6 +23,8 @@ namespace NextPipe.Core.Kubernetes
         Task DeletePVCList(IEnumerable<V1PersistentVolumeClaim> pvcList, string nameSpace = "default");
         Task InstallService(V1Service service, string nameSpace = "default");
         Task DeleteService(string name, string nameSpace = "default");
+        Task InstallModule(V1Deployment moduleDeployment, string nameSpace = "deafualt");
+        Task<V1Deployment> CreateModuleDeployment(string imageName, string moduleName, int moduleReplicas);
 
     }
     
@@ -88,6 +90,59 @@ namespace NextPipe.Core.Kubernetes
             await _client.DeleteNamespacedServiceAsync(name, nameSpace);
         }
 
+        public async Task<V1Deployment> CreateModuleDeployment(string imageName, string moduleName, int moduleReplicas)
+        {
+            return new V1Deployment(
+                "v1",
+                "Deployment",
+                new V1ObjectMeta(
+                    name: moduleName,
+                    labels: new Dictionary<string, string> {{"app", moduleName}},
+                    namespaceProperty: "default"),
+                new V1DeploymentSpec
+                {
+                    Replicas = moduleReplicas,
+                    Selector = new V1LabelSelector()
+                    {
+                        MatchLabels = new Dictionary<string, string>
+                        {
+                            {"app", moduleName}
+                        }
+                    },
+                    Template = new V1PodTemplateSpec()
+                    {
+                        Metadata = new V1ObjectMeta()
+                        {
+                            CreationTimestamp = null,
+                            Labels = new Dictionary<string, string>
+                            {
+                                {"app", moduleName}
+                            }
+                        },
+                        Spec = new V1PodSpec
+                        {
+                            Containers = new List<V1Container>()
+                            {
+                                new V1Container()
+                                {
+                                    Name = imageName,
+                                    Image = imageName,
+                                    ImagePullPolicy = "Always",
+                                    Ports = new List<V1ContainerPort> {new V1ContainerPort(80)}
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        }
+
+
+        public async Task InstallModule(V1Deployment moduleDeployment, string nameSpace = "deafualt")
+        {
+            await _client.CreateNamespacedDeploymentWithHttpMessagesAsync(moduleDeployment, nameSpace);
+        }
+        
         public static string KubectlApplyRabbitService()
         {
             return "cd wwwroot && kubectl apply -f rabbitmq-service.yml";

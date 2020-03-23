@@ -6,12 +6,12 @@ namespace NextPipe.Utilities.Documents.Responses
     {
         public string Message { get; }
 
-        public TaskRequestResponse(IFormattable id, string message, bool isSuccessful = true, Exception exception = null) : base(id, isSuccessful, exception)
+        public TaskRequestResponse(Guid id, string message, bool isSuccessful = true, Exception exception = null) : base(id, isSuccessful, exception)
         {
             Message = message;
         }
 
-        public static TaskRequestResponse AttachToRunningProcess(IFormattable taskId, string msg)
+        public static TaskRequestResponse AttachToRunningProcess(Guid taskId, string msg)
         {
             return new TaskRequestResponse(taskId, msg);
         }
@@ -21,7 +21,7 @@ namespace NextPipe.Utilities.Documents.Responses
             return new TaskRequestResponse(Guid.Empty, msg, false);
         }
 
-        public static TaskRequestResponse TaskRequestAccepted(IFormattable taskId, string msg)
+        public static TaskRequestResponse TaskRequestAccepted(Guid taskId, string msg)
         {
             return new TaskRequestResponse(taskId, msg);
         }
