@@ -12,7 +12,6 @@ namespace NextPipe.Persistence.Entities.NextPipeModules
         public string ModuleName { get; set; }
         public ModuleStatus ModuleStatus { get; set; }
         public int ModuleReplicas { get; set; }
-        
         public string Logs { get; set; } 
         
     }

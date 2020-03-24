@@ -23,11 +23,12 @@ namespace NextPipe.Core.Events.Handlers
         private readonly IModuleRepository _moduleRepository;
         private readonly IModuleInstallManager _moduleInstallManager;
 
-        public TasksEventHandler(ITasksRepository tasksRepository, IRabbitDeploymentManager rabbitDeploymentManager, IModuleRepository moduleRepository)
+        public TasksEventHandler(ITasksRepository tasksRepository, IRabbitDeploymentManager rabbitDeploymentManager, IModuleRepository moduleRepository, IModuleInstallManager moduleInstallManager)
         {
             _tasksRepository = tasksRepository;
             _rabbitDeploymentManager = rabbitDeploymentManager;
             _moduleRepository = moduleRepository;
+            _moduleInstallManager = moduleInstallManager;
         }
 
         /// <summary>
@@ -79,11 +80,11 @@ namespace NextPipe.Core.Events.Handlers
 
         public async Task HandleAsync(InstallModuleTaskRequestEvent evt, CancellationToken ct)
         {
-            await _moduleRepository.UpdateModuleStatus(evt.Id.Value, ModuleStatus.Installing);
-            await _tasksRepository.UpdateTaskQueueStatus(evt.Id.Value, QueueStatus.Running);
-            await _tasksRepository.UpdateTaskStatus(evt.Id.Value, TaskStatus.Running);
-
-            await _moduleInstallManager.DeployModule(new ModuleInstallManagerConfig(evt.Id, evt.ModuleReplicas,
+            await _moduleRepository.UpdateModuleStatus(evt.ReferenceId.Value, ModuleStatus.Installing);
+            await _tasksRepository.UpdateTaskQueueStatus(evt.TaskId.Value, QueueStatus.Running);
+            await _tasksRepository.UpdateTaskStatus(evt.TaskId.Value, TaskStatus.Running);
+            Console.WriteLine("Event handler was hit");
+            await _moduleInstallManager.DeployModule(new ModuleInstallManagerConfig(evt.TaskId, evt.ModuleReplicas,
                 evt.ModuleName, evt.ImageName, SuccessCallback, FailureCallback, UpdateCallback), true);
         }
     }

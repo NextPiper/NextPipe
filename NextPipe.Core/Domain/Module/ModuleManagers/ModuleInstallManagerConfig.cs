@@ -8,7 +8,7 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
 {
     public interface IModuleInstallManagerConfig
     {
-        Id Id { get; }
+        Id TaskId { get; }
         int ModuleReplicas { get; }
         string ModuleName { get; }
         string ImageName { get; }
@@ -18,7 +18,7 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
     }
     public class ModuleInstallManagerConfig : IModuleInstallManagerConfig
     {
-        public Id Id { get; }
+        public Id TaskId { get; }
         private readonly ModuleReplicas _moduleReplicas;
         private readonly ImageName _imageName;
         private readonly ModuleName _moduleName;
@@ -27,9 +27,9 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
         public Func<Id, ILogHandler, Task> FailureCallback { get; }
         public Func<Id, ILogHandler, Task> UpdateCallback { get; }
 
-        public ModuleInstallManagerConfig(Id id, ModuleReplicas moduleReplicas, ModuleName moduleName, ImageName imageName, Func<Id, ILogHandler, Task> successCallback, Func<Id, ILogHandler, Task> failureCallback, Func<Id, ILogHandler, Task> updateCallback)
+        public ModuleInstallManagerConfig(Id taskId, ModuleReplicas moduleReplicas, ModuleName moduleName, ImageName imageName, Func<Id, ILogHandler, Task> successCallback, Func<Id, ILogHandler, Task> failureCallback, Func<Id, ILogHandler, Task> updateCallback)
         {
-            Id = id;
+            TaskId = taskId;
             _moduleReplicas = moduleReplicas;
             _moduleName = moduleName;
             _imageName = imageName;
