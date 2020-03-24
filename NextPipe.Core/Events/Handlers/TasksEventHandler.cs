@@ -1,4 +1,5 @@
 using System;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NextPipe.Core.Domain.Module.ModuleManagers;
@@ -6,6 +7,7 @@ using NextPipe.Core.Domain.SharedValueObjects;
 using NextPipe.Core.Events.Events;
 using NextPipe.Core.Helpers;
 using NextPipe.Persistence.Entities;
+using NextPipe.Persistence.Entities.Metadata;
 using NextPipe.Persistence.Entities.NextPipeModules;
 using NextPipe.Persistence.Repositories;
 using SimpleSoft.Mediator;
@@ -39,10 +41,17 @@ namespace NextPipe.Core.Events.Handlers
         public async Task HandleAsync(InitializeInfrastructureTaskRequestEvent evt, CancellationToken ct)
         {
             // Start by updating the que and task status appropriately 
-            await _tasksRepository.UpdateTaskQueueStatus(evt.TaskId.Value, QueueStatus.Running);
-            await _tasksRepository.UpdateTaskStatus(evt.TaskId.Value, TaskStatus.Running);
+            var task = await _tasksRepository.SetTaskStartedWithMetadata(evt.TaskId.Value, QueueStatus.Running, TaskStatus.Running,
+                new InfrastructureInstallMetadata
+                {
+                    LowerBoundaryReadyReplicas = evt.LowerBoundaryReadyReplicas.Value,
+                    ReplicaFailureThreshold = evt.ReplicaFailureThreshold.Value,
+                    ReplicaDelaySeconds = evt.ReplicaDelaySeconds.Value,
+                    RabbitNumberOfReplicas = evt.RabbitNumberOfReplicas.Value
+                });
             
             // Make sure the logging is verbose for console prints
+            _rabbitDeploymentManager.AttachPreviousLogs(task.Logs);
             _rabbitDeploymentManager.SetVerboseLogging(true);
             
             // Deploy rabbitMQ infrastructure
@@ -54,10 +63,10 @@ namespace NextPipe.Core.Events.Handlers
         public async Task HandleAsync(UninstallInfrastructureTaskRequestEvent evt, CancellationToken ct)
         {
             // Start by updating the que and task status appropriately
-            await _tasksRepository.UpdateTaskQueueStatus(evt.TaskId.Value, QueueStatus.Running);
-            await _tasksRepository.UpdateTaskStatus(evt.TaskId.Value, TaskStatus.Running);
+            var task = await _tasksRepository.SetTaskStarted(evt.TaskId.Value, QueueStatus.Running, TaskStatus.Running);
             
             _rabbitDeploymentManager.AttachTaskIdAndUpdateHandler(evt.TaskId, UpdateCallback);
+            _rabbitDeploymentManager.AttachPreviousLogs(task.Logs);
 
             await _rabbitDeploymentManager.Cleanup(evt.TaskId, SuccessCallback, FailureCallback, true);
         }

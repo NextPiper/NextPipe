@@ -12,10 +12,12 @@ namespace NextPipe.Core.Helpers
             var escapedArgs = cmd.Replace("\"", "\\\"");
 
             var builder = new StringBuilder();
-            
-            builder.AppendLine("------------------------------------------------");
-            builder.AppendLine($"Executing: {cmd} - at: {DateTime.Now.ToString()}");
-            builder.AppendLine("------------------------------------------------");
+            if (logVerbose)
+            {
+                builder.AppendLine("------------------------------------------------");
+                builder.AppendLine($"Executing: {cmd} - at: {DateTime.Now.ToString()}");
+                builder.AppendLine("------------------------------------------------");  
+            }
             
             var process = new Process()
             {
@@ -89,9 +91,14 @@ namespace NextPipe.Core.Helpers
             return true;
         }
 
-        public static int ToMillis(this int i)
+        public static int SecToMillis(this int i)
         {
             return i * 1000;
+        }
+
+        public static int MinToMillis(this int i)
+        {
+            return (i * 60).SecToMillis();
         }
     }
 }

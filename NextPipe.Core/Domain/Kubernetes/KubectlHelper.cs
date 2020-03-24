@@ -4,8 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Xml.Schema;
 using k8s;
 using k8s.Models;
+using Microsoft.AspNetCore.Http;
 using NextPipe.Core.Documents;
 
 namespace NextPipe.Core.Kubernetes
@@ -99,8 +101,15 @@ namespace NextPipe.Core.Kubernetes
 
         public async Task<string> DeleteService(string name, string nameSpace = "default")
         {
-            var result = await _client.DeleteNamespacedServiceAsync(name, nameSpace);
-            return result.Message;
+            try
+            {
+                var result = await _client.DeleteNamespacedServiceAsync(name, nameSpace);
+                return result.Message;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
         }
 
         public static V1Deployment CreateModuleDeployment(string imageName, string moduleName, int moduleReplicas)

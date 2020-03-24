@@ -22,6 +22,7 @@ namespace NextPipe.Core
         Task Deploy(IRabbitDeploymentManagerConfiguration config);
         Task Cleanup(Id taskId, Func<Id, ILogHandler, Task> successHandler, Func<Id, ILogHandler, Task> failureHandler, bool verboseLogging = false);
         void AttachTaskIdAndUpdateHandler(Id taskId, Func<Id, ILogHandler, Task> updateHandler);
+        void AttachPreviousLogs(string logs);
         void SetVerboseLogging(bool verboseLogging);
     }
 
@@ -82,6 +83,11 @@ namespace NextPipe.Core
         public void AttachTaskIdAndUpdateHandler(Id taskId, Func<Id, ILogHandler, Task> updateHandler)
         {
             _logHandler.AttachTaskIdAndUpdateHandler(taskId, updateHandler);
+        }
+
+        public void AttachPreviousLogs(string logs)
+        {
+            _logHandler.AttachPreviousLogs(logs);
         }
 
         public void SetVerboseLogging(bool verboseLogging)
@@ -155,7 +161,7 @@ namespace NextPipe.Core
                 await _logHandler.WriteLine($"Deleting PVC: {pvc.Metadata.Name}", verboseLogging);
             }
             await _kubectlHelper.DeletePVCList(pvcList);
-
+            await _logHandler.WriteLine($"Successful cleanup --> Calling successHandler");
             await successHandler(taskId, _logHandler);
         }
 
@@ -187,7 +193,7 @@ namespace NextPipe.Core
             await _logHandler.WriteLine("No existing RabbitMQ infrastructure --> Provision RabbitMQ infrastructure", verboseLogging);
             await _helmManager.InstallHelm(_logHandler, verboseLogging);
             await _helmManager.InstallRabbitMQ(RABBIT_MQ_STATEFULSET, _logHandler,  verboseLogging, config.RabbitNumberOfReplicas);
-            await Task.Delay(30.ToMillis());
+            await Task.Delay(30.SecToMillis());
         }
 
         private async Task ValidateRabbitMQDeployment(IRabbitDeploymentManagerConfiguration config)
@@ -230,7 +236,7 @@ namespace NextPipe.Core
             await _logHandler.WriteLine($"Waiting for ready replicas... {config.ReplicaDelaySeconds}", verboseLogging);
     
             // Wait the initial delay
-            await Task.Delay(config.ReplicaDelaySeconds.ToMillis());
+            await Task.Delay(config.ReplicaDelaySeconds.SecToMillis());
     
             while (true)
             {
@@ -249,7 +255,7 @@ namespace NextPipe.Core
     
                 await _logHandler.WriteLine($"lowerBoundaryReplicas={config.LowerBoundaryReadyReplicas}, readyReplicas={readyReplicas}. {config.LowerBoundaryReadyReplicas - readyReplicas} ready replica(s) needed for operations. Attempt {failedAttempts}/{config.ReplicaFailureThreshold}",
                     verboseLogging, LogHandler.InProgressTemplate);
-                await Task.Delay(config.ReplicaDelaySeconds.ToMillis());
+                await Task.Delay(config.ReplicaDelaySeconds.SecToMillis());
             }
         }
     }

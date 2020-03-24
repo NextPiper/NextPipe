@@ -18,8 +18,6 @@ namespace NextPipe.Messaging.Infrastructure.Registry
             For<ICommandRouter>().Use<MediatorCommandRouter>();
             For<IQueryRouter>().Use<MediatorQueryRouter>();
             For<IEventPublisher>().Use<MediatorEventPublisher>();
-
-
         }
     }
 }

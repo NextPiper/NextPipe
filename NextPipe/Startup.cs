@@ -18,6 +18,7 @@ using Newtonsoft.Json.Serialization;
 using NextPipe.Configuration;
 using NextPipe.Middleware;
 using NextPipe.Registry;
+using NextPipe.Services;
 
 namespace NextPipe
 {
@@ -40,10 +41,11 @@ namespace NextPipe
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
             
+            // in-comment this again to get complete IOC validation
             //var container = new Container(services);
             //container.AssertConfigurationIsValid();
             
-            //services.AddHostedService<KubernetesService>();
+            services.AddHostedService<ResourceAndStateManagerService>();
 
             services.AddSwaggerGen(c =>
             {

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NextPipe.Core.Commands.Commands.StartupCommands;
+using NextPipe.Core.Domain.NextPipeTask.ValueObject;
 using NextPipe.Core.Domain.SharedValueObjects;
 using NextPipe.Core.Events.Events;
 using NextPipe.Core.Kubernetes;
@@ -31,16 +32,20 @@ namespace NextPipe.Core.Commands.Handlers
 
         public async Task<TaskRequestResponse> HandleAsync(RequestInitializeInfrastructure cmd, CancellationToken ct)
         {
-            // Check if there is already a task running
-            var result = await _tasksRepository.GetTasksByTaskType(TaskType.RabbitInfrastructureDeploy);
-            if (result.Any())
+            // Check if there is already a infrastructureInstal task running
+            var nextPipeTask = await IsInfrastructureInstallRequestRunning();
+            if (nextPipeTask != null)
             {
-                if (result.FirstOrDefault().QueueStatus != QueueStatus.Completed)
-                {
-                    // This means that there is a RabbitInfrastructureDeploy type which is either pending or running. Reply with an AttachingToProcess msg
-                    return TaskRequestResponse.AttachToRunningProcess(result.FirstOrDefault().TaskId,
-                        $"Task already queued with {nameof(QueueStatus)}={result.FirstOrDefault().QueueStatus}, attaching to task");
-                }
+                return TaskRequestResponse.AttachToRunningProcess(nextPipeTask.TaskId,
+                    $"Task already queued with {nameof(QueueStatus)}={nextPipeTask.QueueStatus}, attaching to task");
+            }
+            
+            // Check if there is already a infrastructuree uninstall event running
+            var nextPipeUninstall = await IsInfrastructureUninstallRequestRunning();
+            if (nextPipeUninstall != null)
+            {
+                return TaskRequestResponse.UninstallRunning(nextPipeUninstall.TaskId,
+                    "The infrastructure is currently being uninstalled, can't install until it finishes, attaching to uninstall task");
             }
             
             // No task is provisioning the infrastructure. See if it is already up and running with the desired number of ready replicas
@@ -64,7 +69,9 @@ namespace NextPipe.Core.Commands.Handlers
                 TaskStatus = TaskStatus.Ready,
                 TaskPriority = TaskPriority.Fatal,
                 TaskType = TaskType.RabbitInfrastructureDeploy,
-                Logs = ""
+                Hostname = new Hostname().Value,
+                Logs = "",
+                ReferenceId = Guid.Empty
             });
 
             _eventPublisher.PublishAsync(new InitializeInfrastructureTaskRequestEvent(taskId,
@@ -77,15 +84,18 @@ namespace NextPipe.Core.Commands.Handlers
         public async Task<TaskRequestResponse> HandleAsync(RequestUninstallInfrastructure cmd, CancellationToken ct)
         {
             // Check if there is already a task running
-            var result = await _tasksRepository.GetTasksByTaskType(TaskType.RabbitInfrastructureUninstall);
-            if (result.Any())
+            var nextPipeTask = await IsInfrastructureUninstallRequestRunning();
+            if (nextPipeTask != null)
             {
-                if (result.FirstOrDefault().QueueStatus != QueueStatus.Completed)
-                {
-                    // A cleanup task is already running attach to that task instead
-                    return TaskRequestResponse.AttachToRunningProcess(result.FirstOrDefault().TaskId,
-                        $"Task already queued with {nameof(QueueStatus)}={result.FirstOrDefault().QueueStatus}, attaching to task");
-                }
+                return TaskRequestResponse.AttachToRunningProcess(nextPipeTask.TaskId,
+                    $"Task already queued with {nameof(QueueStatus)}={nextPipeTask.QueueStatus}, attaching to task");
+            }
+
+            var nextPipeInstall = await IsInfrastructureInstallRequestRunning();
+            if (nextPipeInstall != null)
+            {
+                return TaskRequestResponse.InstallRunning(nextPipeInstall.TaskId,
+                    $"The infrastructure is currently being installed, can't uninstall until it finishes, attaching to task");
             }
             
             // The task is not running. Queue a task to cleanup the infrastructure
@@ -100,12 +110,51 @@ namespace NextPipe.Core.Commands.Handlers
                 TaskStatus = TaskStatus.Ready,
                 TaskPriority = TaskPriority.Fatal,
                 TaskType = TaskType.RabbitInfrastructureUninstall,
-                Logs = ""
+                Logs = "",
+                Hostname = new Hostname().Value,
+                ReferenceId = Guid.Empty
             });
 
             _eventPublisher.PublishAsync(new UninstallInfrastructureTaskRequestEvent(taskId));
 
             return TaskRequestResponse.TaskRequestAccepted(taskId.Value, "Uninstall infrastructure request accepted");
+        }
+
+
+        private async Task<NextPipeTask> IsInfrastructureInstallRequestRunning()
+        {
+            var result = await _tasksRepository.GetTasksByTaskType(TaskType.RabbitInfrastructureDeploy);
+            if (result.Any())
+            {
+                foreach (var nextPipeTask in result)
+                {
+                    if (nextPipeTask.QueueStatus != QueueStatus.Completed)
+                    {
+                        // This means that there is a RabbitInfrastructureDeploy type which is either pending or running. Reply with an AttachingToProcess msg
+                        return nextPipeTask;
+                    }   
+                }
+            }
+
+            return null;
+        }
+
+        private async Task<NextPipeTask> IsInfrastructureUninstallRequestRunning()
+        {
+            var result = await _tasksRepository.GetTasksByTaskType(TaskType.RabbitInfrastructureUninstall);
+            if (result.Any())
+            {
+                foreach (var nextPipeTask in result)
+                {
+                    if (nextPipeTask.QueueStatus != QueueStatus.Completed)
+                    {
+                        // A cleanup task is already running attach to that task instead
+                        return nextPipeTask;
+                    } 
+                }
+            }
+
+            return null;
         }
     }
 }

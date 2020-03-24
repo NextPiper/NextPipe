@@ -41,6 +41,8 @@ namespace NextPipe.Core
 
         public async Task CleanUp(string deploymentName, ILogHandler logHandler, bool verboseCleanup = false)
         {
+            // Make sure that helm is installed such that cleanup can 
+            await InstallHelm(logHandler, verboseCleanup);
             await $"helm delete {deploymentName}".BashAsync(logHandler, verboseCleanup);
         }
     }

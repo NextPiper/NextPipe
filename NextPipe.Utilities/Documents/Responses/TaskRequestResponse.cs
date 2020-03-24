@@ -25,5 +25,15 @@ namespace NextPipe.Utilities.Documents.Responses
         {
             return new TaskRequestResponse(taskId, msg);
         }
+
+        public static TaskRequestResponse UninstallRunning(Guid taskId, string msg)
+        {
+            return new TaskRequestResponse(taskId, msg, false);
+        }
+
+        public static TaskRequestResponse InstallRunning(Guid taskId, string msg)
+        {
+            return new TaskRequestResponse(taskId, msg, false);
+        }
     }
 }

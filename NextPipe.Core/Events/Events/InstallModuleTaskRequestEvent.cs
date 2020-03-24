@@ -18,5 +18,4 @@ namespace NextPipe.Core.Events.Events
             
         }
     }
-    
 }

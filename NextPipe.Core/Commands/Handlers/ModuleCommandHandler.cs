@@ -57,8 +57,8 @@ namespace NextPipe.Core.Commands.Handlers
                 ImageName = cmd.ImageName.Value,
                 ModuleName = cmd.ModuleName.Value,
                 ModuleReplicas = cmd.ModuleReplicas.Value
-
             });
+            
             var taskId = new Id();
             await _tasksRepository.Insert(new NextPipeTask
             {
@@ -71,8 +71,7 @@ namespace NextPipe.Core.Commands.Handlers
                 TaskPriority = TaskPriority.Medium,
                 TaskType = TaskType.ModuleInstall,
                 Logs = "",
-                ReferenceId = moduleId.Value
-
+                ReferenceId = moduleId.Value,
             });
             
             _eventPublisher.PublishAsync(

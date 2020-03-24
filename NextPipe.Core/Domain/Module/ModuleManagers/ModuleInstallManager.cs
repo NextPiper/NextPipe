@@ -20,14 +20,12 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
             _kubectlHelper = kubectlHelper;
             _logHandler = new LogHandler();
         }
-        public Task DeployModule(IModuleInstallManagerConfig config)
+        public async Task DeployModule(IModuleInstallManagerConfig config)
         {
             var moduleDeployment =
                 KubectlHelper.CreateModuleDeployment(config.ImageName, config.ModuleName, config.ModuleReplicas);
             await _kubectlHelper.InstallModule(moduleDeployment);
-            return null;
+            
         }
-        
-        
     }
 }

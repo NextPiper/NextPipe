@@ -14,7 +14,8 @@ namespace NextPipe.Core.Helpers
         string GetLog();
         string GetLastUpdate();
         string GetLastWrite();
-        void AttachTaskIdAndUpdateHandler(Id taskId, Func<Id, ILogHandler, Task> updateHandler); 
+        void AttachTaskIdAndUpdateHandler(Id taskId, Func<Id, ILogHandler, Task> updateHandler);
+        void AttachPreviousLogs(string logs);
     }
     
     public class LogHandler : ILogHandler
@@ -35,7 +36,12 @@ namespace NextPipe.Core.Helpers
             this.updateHandler = updateHandler;
             this.taskId = taskId;
         }
-        
+
+        public void AttachPreviousLogs(string logs)
+        {
+            builder.Append(logs);
+        }
+
         public async Task Write(string msg, bool verboseLogging = false, Func<string, string> formatOption = null)
         {
             var line = msg;
