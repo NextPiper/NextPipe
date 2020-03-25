@@ -26,7 +26,7 @@ namespace NextPipe.Services
             isRunning = true;
             
             // Start the taskResourceCleaner thread 
-            TaskResourceCleaner(cancellationToken);   
+            await TaskResourceCleaner(cancellationToken);   
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)

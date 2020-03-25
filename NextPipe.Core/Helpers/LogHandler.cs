@@ -131,5 +131,16 @@ namespace NextPipe.Core.Helpers
 
             return builder.ToString();
         }
+
+        public static void WriteLineVerbose(string cmd)
+        {
+            var builder = new StringBuilder();
+            
+            builder.AppendLine("------------------------------------------------");
+            builder.AppendLine($"Executing: {cmd} - at: {DateTime.Now.ToString()}");
+            builder.AppendLine("------------------------------------------------");
+
+            Console.WriteLine(builder.ToString());
+        }
     }
 }

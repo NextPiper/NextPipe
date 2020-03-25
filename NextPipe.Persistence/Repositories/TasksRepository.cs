@@ -142,20 +142,27 @@ namespace NextPipe.Persistence.Repositories
 
         public async Task IncrementRestarts(Guid taskId, string hostname, string logs = null)
         {
-            if (logs == null)
+            try
             {
-                await Collection().FindOneAndUpdateAsync(t => t.TaskId == taskId, 
-                    Update
-                        .Inc(t => t.Restarts, 1)
-                        .Set(t => t.Hostname, hostname));   
+                if (logs == null)
+                {
+                    await Collection().FindOneAndUpdateAsync(t => t.TaskId == taskId, 
+                        Update
+                            .Inc(t => t.Restarts, 1)
+                            .Set(t => t.Hostname, hostname));   
+                }
+                else
+                {
+                    await Collection().FindOneAndUpdateAsync(t => t.TaskId == taskId, 
+                        Update
+                            .Inc(t => t.Restarts, 1)
+                            .Set(t => t.Logs, logs)
+                            .Set(t => t.Hostname, hostname));
+                }
             }
-            else
+            catch (Exception e)
             {
-                await Collection().FindOneAndUpdateAsync(t => t.TaskId == taskId, 
-                    Update
-                        .Inc(t => t.Restarts, 1)
-                        .Set(t => t.Logs, logs)
-                        .Set(t => t.Hostname, hostname));
+                Console.WriteLine(e);
             }
         }
 

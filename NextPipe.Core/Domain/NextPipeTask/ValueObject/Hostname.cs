@@ -7,7 +7,6 @@ namespace NextPipe.Core.Domain.NextPipeTask.ValueObject
     {
         public Hostname() : base("cd .. && cd etc && hostname".Bash())
         {
-            
         }
     }
 }

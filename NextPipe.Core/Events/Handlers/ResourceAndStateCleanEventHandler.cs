@@ -35,8 +35,10 @@ namespace NextPipe.Core.Events.Handlers
         
         public async Task HandleAsync(CleanupHangingTasksEvent evt, CancellationToken ct)
         {
+            
             // Find all running tasks in system
             var runningTasks = await _tasksRepository.GetAllRunningTasks(0, 10000);
+            LogHandler.WriteLineVerbose($"Fetching running tasks: {runningTasks.Count()}");
             // If there is any running task in the system ensure that they are not hanging by matching their hostname
             // with all currently running pods...
             if (runningTasks.Any())
@@ -44,12 +46,13 @@ namespace NextPipe.Core.Events.Handlers
                 // Get all running nextpipe-deployment hosts
                 var hosts = await _kubectlHelper.GetPodsByCustomNameFilter(NEXTPIPE_DEPLOYMENT,
                     ShellHelper.IdenticalStart);
-                
+
                 //Iterate each task and if the tasks host is not running clean up the task
                 foreach (var task in runningTasks)
                 {
-                    if (!hosts.Any(t => t.Metadata.Name.Equals(task.Hostname)))
+                    if (!hosts.Any(t => t.Metadata.Name.Trim().ToLower().Equals(task.Hostname.Trim().ToLower())))
                     {
+                        LogHandler.WriteLineVerbose($"Task: {task.TaskId} of type: {task.TaskType} is scheduled on dead host: {task.Hostname} - Doing Cleanup");
                         await CleanupTask(task);
                     }
                 }
@@ -80,10 +83,11 @@ namespace NextPipe.Core.Events.Handlers
             // if metadata is null then also cleanup, we dont have required data to do a restart
             if (task.Restarts >= 1 || metadata == null)
             {
+                LogHandler.WriteLineVerbose($"Task has already been restarted {task.Restarts} time(s) or metadata is null");
                 // Task already restarted once, stop task and cleanup infrastructure
                 builder.AppendLine("Suspending task... Restart limit 1/1 reached. See logs for failure reason and check if manuel cleanup is required");
-                await _tasksRepository.AppendLog(task.Id, task.Logs + builder.ToString());
-                await _tasksRepository.UpdateStatus(task.Id, TaskStatus.Failed, QueueStatus.Suspended);
+                await _tasksRepository.AppendLog(task.TaskId, task.Logs + builder.ToString());
+                await _tasksRepository.UpdateStatus(task.TaskId, TaskStatus.Failed, QueueStatus.Suspended);
                 
                 // Schedule an uninstallInfrastructure cleanup
                 var id = new Id();
@@ -103,10 +107,12 @@ namespace NextPipe.Core.Events.Handlers
                 return;
             }
 
-            builder.AppendLine($"Task was restarted due to previous host death. Restart 1/1");
+            var host = new Hostname();
+            LogHandler.WriteLineVerbose($"Task was restarted due to previous host death. Restart 1/1 - Attaching task to host: {host.Value}");
+            builder.AppendLine($"Task was restarted due to previous host death. Restart 1/1 - Attaching task to host: {host.Value}");
             // Increment restarts and log
-            await _tasksRepository.IncrementRestarts(task.TaskId, new Hostname().Value, task.Logs + builder.ToString());
-            
+            await _tasksRepository.IncrementRestarts(task.TaskId, host.Value, task.Logs + builder.ToString());
+            LogHandler.WriteLineVerbose("Task was updated with new host.Value and logs");
             // Republish infrastructure initialize event
             await _eventPublisher.PublishAsync(new InitializeInfrastructureTaskRequestEvent(
                 new Id(task.TaskId),
@@ -127,6 +133,7 @@ namespace NextPipe.Core.Events.Handlers
                 await _tasksRepository.AppendLog(task.TaskId, task.Logs + builder.ToString());
                 await _tasksRepository.UpdateTaskStatus(task.TaskId, TaskStatus.Failed);
                 await _tasksRepository.UpdateTaskQueueStatus(task.TaskId, QueueStatus.Suspended);
+                return;
             }
 
             builder.AppendLine(
