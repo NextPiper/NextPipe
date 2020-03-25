@@ -28,21 +28,22 @@ namespace NextPipe.Core.Commands.Handlers
 
         public async Task<TaskRequestResponse> HandleAsync(RequestInstallModule cmd, CancellationToken ct)
         {
+
             var imageResult = await _moduleRepository.GetModuleByImageName(cmd.ImageName.Value);
             var moduleNameResult = await _moduleRepository.GetModuleByModuleName(cmd.ModuleName.Value);
-            
+
             // The module which is being requested for install has a image which is already in the system.
-            if (!imageResult.Equals(null) && moduleNameResult.Equals(null))
+            if (!(imageResult is null) && moduleNameResult is null)
             {
                 return new TaskRequestResponse(imageResult.Id, $"The module requested to be installed is already present in a different deployment. The image --insertimage is already running in --insertmodulename  ",false);
             }
             // The module which is being requested for install has a duplicate deployment name.
-            if (imageResult.Equals(null) && !moduleNameResult.Equals(null))
+            if (imageResult is null && !(moduleNameResult is null))
             {
                 return new TaskRequestResponse(moduleNameResult.Id, $"The module requested to be installed has a duplicate deployment name. {cmd.ModuleName} is already taken",false);
             }
             //The module which is being requested for install is already in the system.
-            if (!imageResult.Equals(null) && !moduleNameResult.Equals(null))
+            if (!(imageResult is null) && !(moduleNameResult is null))
             {
                 return new TaskRequestResponse(imageResult.Id, $"The module requested to be installed is already in the system. {cmd.ImageName} and {cmd.ModuleName} has status: --insertstatus and this amountofreplicas ",false);
             }
@@ -75,7 +76,7 @@ namespace NextPipe.Core.Commands.Handlers
             });
             
             _eventPublisher.PublishAsync(
-                new InstallModuleTaskRequestEvent(taskId, cmd.ModuleReplicas, cmd.ImageName, cmd.ModuleName));
+                new InstallModuleTaskRequestEvent(taskId, moduleId,cmd.ModuleReplicas, cmd.ImageName, cmd.ModuleName));
             return TaskRequestResponse.TaskRequestAccepted(taskId.Value, "Module Installation Request Accepted");
 
         }

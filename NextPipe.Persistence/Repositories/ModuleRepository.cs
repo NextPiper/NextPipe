@@ -30,9 +30,9 @@ namespace NextPipe.Persistence.Repositories
             
             var options2 = new CreateIndexOptions { Unique = true };
             var field2 = new StringFieldDefinition<Module>("ModuleName");
-            var indexDefinition2 = new IndexKeysDefinitionBuilder<Module>().Ascending(field);
-            var indexModel2 = new CreateIndexModel<Module>(indexDefinition,options);
-            Database.GetCollection<Module>(CollectionName).Indexes.CreateOne(indexModel);
+            var indexDefinition2 = new IndexKeysDefinitionBuilder<Module>().Ascending(field2);
+            var indexModel2 = new CreateIndexModel<Module>(indexDefinition2,options2);
+            Database.GetCollection<Module>(CollectionName).Indexes.CreateOne(indexModel2);
             
         }
 

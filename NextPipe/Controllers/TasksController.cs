@@ -96,5 +96,22 @@ namespace NextPipe.Controllers
             
             return StatusCode(409, result.Message); 
         }
+        
+        [HttpPost]
+        [Route("trail-request-module-install")]
+        public async Task<IActionResult> trailRequestInstallModule(string imageName, int amountOfReplicas, string moduleName)
+        {
+            try
+            {
+                var deployment = KubectlHelper.CreateModuleDeployment(imageName, moduleName, amountOfReplicas);
+                _kubectlHelper.InstallModule(deployment);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+            return StatusCode(200);
+        }
     }
 }

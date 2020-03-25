@@ -7,15 +7,21 @@ namespace NextPipe.Core.Events.Events
 {
     public class InstallModuleTaskRequestEvent : BaseEvent
     {
-        public Id Id { get; }
+        public Id TaskId { get; }
+        
+        public Id ReferenceId { get; }
         public ModuleReplicas ModuleReplicas { get; }
         public ImageName ImageName { get; }
         public ModuleName ModuleName { get; }
 
-        public InstallModuleTaskRequestEvent(Id ModuleId, ModuleReplicas moduleReplicas, ImageName imageName,
+        public InstallModuleTaskRequestEvent(Id taskId, Id referenceId, ModuleReplicas moduleReplicas, ImageName imageName,
             ModuleName moduleName)
         {
-            
+            TaskId = taskId;
+            ReferenceId = referenceId;
+            ModuleReplicas = moduleReplicas;
+            ImageName = imageName;
+            ModuleName = moduleName;
         }
     }
 }
