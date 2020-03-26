@@ -60,24 +60,7 @@ namespace NextPipe.Core.Commands.Handlers
                 ModuleReplicas = cmd.ModuleReplicas.Value
             });
             
-            var taskId = new Id();
-            await _tasksRepository.Insert(new NextPipeTask
-            {
-                CreatedAt = DateTime.Now,
-                EditedAt = DateTime.Now,
-                Id = new Id().Value,
-                QueueStatus = QueueStatus.Pending,
-                TaskId = taskId.Value,
-                TaskStatus = TaskStatus.Ready,
-                TaskPriority = TaskPriority.Medium,
-                TaskType = TaskType.ModuleInstall,
-                Logs = "",
-                ReferenceId = moduleId.Value,
-            });
-            
-            _eventPublisher.PublishAsync(
-                new InstallModuleTaskRequestEvent(taskId, moduleId,cmd.ModuleReplicas, cmd.ImageName, cmd.ModuleName));
-            return TaskRequestResponse.TaskRequestAccepted(taskId.Value, "Module Installation Request Accepted");
+            return TaskRequestResponse.TaskRequestAccepted(moduleId.Value, "Module was accepted and is awaiting upstart");
 
         }
     }

@@ -1,5 +1,6 @@
 using k8s;
 using Lamar;
+using NextPipe.Core.Domain.Module.ModuleManagers;
 using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
 using NextPipe.Messaging.Infrastructure.Registry;
@@ -17,9 +18,11 @@ namespace NextPipe.Core.CoreRegistry
             For<IRabbitDeploymentManager>().Use<RabbitDeploymentManager>();
             For<IHelmManager>().Use<HelmManager>();
             For<ILogHandler>().Use<LogHandler>();
+            For<IModuleInstallManager>().Use<ModuleInstallManager>();
             
             IncludeRegistry<MessagingInfrastructureRegistry>();
             IncludeRegistry<PersistenceRegistry>();
+            
             
             Scan(scanner =>
             {

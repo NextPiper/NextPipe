@@ -81,26 +81,10 @@ namespace NextPipe.Controllers
         [Microsoft.AspNetCore.Mvc.Route("")]
         public async Task<IActionResult> GetTasks(int page = 0, int pageSize = 100)
         {
-           var result =
+            var result =
                 await QueryAsync<GetTasksPagedQuery, IEnumerable<NextPipeTask>>(new GetTasksPagedQuery(page, pageSize));
 
             return ReadDefaultQuery(result);
-        }
-        
-        [HttpPost]
-        [Microsoft.AspNetCore.Mvc.Route("request-module-install")]
-        public async Task<IActionResult> RequestInstallModule(string imageName, int amountOfReplicas, string moduleName)
-        {
-            var result =
-                await RouteAsync<RequestInstallModule, TaskRequestResponse>(
-                    new RequestInstallModule(imageName, amountOfReplicas, moduleName));
-            
-            if (result.IsSuccessful)
-            {
-                return StatusCode(202, new {monitorUrl = $"core/tasks/{result.Id}", msg = result.Message});
-            }
-            
-            return StatusCode(409, result.Message); 
         }
     }
 }

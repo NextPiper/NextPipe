@@ -10,7 +10,7 @@ namespace NextPipe.Persistence.Repositories
         Task<bool> Delete(Guid id);
         Task<IEnumerable<TEntity>> GetAll(int skip = 0, int limit = 100);
         Task<IEnumerable<TEntity>> GetPaged(int page, int pagesize);
-        Task<IEntity> GetById(Guid id);
+        Task<TEntity> GetById(Guid id);
         Task<Guid> Insert(TEntity entity);
     }
 }

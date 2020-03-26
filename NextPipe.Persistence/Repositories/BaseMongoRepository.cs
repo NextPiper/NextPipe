@@ -78,7 +78,7 @@ namespace NextPipe.Persistence.Repositories
             return await GetAll(page * pagesize, pagesize);
         }
 
-        public async Task<IEntity> GetById(Guid id)
+        public async Task<TEntity> GetById(Guid id)
         {
             return await Collection().Find(entity => entity.Id == id).SingleOrDefaultAsync();
         }

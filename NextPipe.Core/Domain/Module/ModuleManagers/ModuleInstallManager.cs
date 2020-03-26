@@ -24,7 +24,7 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
         }
         public async Task DeployModule(IModuleInstallManagerConfig config, bool verboseLogging)
         {
-            _logHandler.WriteCmd($"{nameof(ModuleInstallManager)}.{nameof(DeployModule)}", verboseLogging);
+            await _logHandler.WriteCmd($"{nameof(ModuleInstallManager)}.{nameof(DeployModule)}", verboseLogging);
             var moduleDeployment =
                 KubectlHelper.CreateModuleDeployment(config.ImageName, config.ModuleName, config.ModuleReplicas);
             await _kubectlHelper.InstallModule(moduleDeployment);
@@ -34,7 +34,6 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
         public void SetVerboseLogging(bool verboseLogging)
         {
             this.verboseLogging = verboseLogging;
-            
         }
     }
 }
