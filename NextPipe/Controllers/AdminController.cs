@@ -6,7 +6,7 @@ using Serilog;
 namespace NextPipe.Controllers
 {
     [ApiController]
-    [Route("core/addmin")]
+    [Route("core/admin")]
     public class AdminController : BaseController
     {
         public AdminController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter) : base(logger, queryRouter, commandRouter)
