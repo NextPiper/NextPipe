@@ -22,16 +22,16 @@ namespace NextPipe.Services
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             IsRunning = true;
-            ResolveModulesWithRequestToChange(cancellationToken);
+            ResolvePendingModules(cancellationToken);
+            ResolveUninstallModules(cancellationToken);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             IsRunning = false;
-            
         }
 
-        private async Task ResolveModulesWithRequestToChange(CancellationToken cancellationToken)
+        private async Task ResolvePendingModules(CancellationToken cancellationToken)
         {
             while (IsRunning)
             {
@@ -42,6 +42,20 @@ namespace NextPipe.Services
                 var result =
                     await _commandRouter.RouteAsync<InstallPendingModulesCommand, Response>(
                         new InstallPendingModulesCommand(),cancellationToken);
+            }
+        }
+
+        private async Task ResolveUninstallModules(CancellationToken cancellationToken)
+        {
+            while (IsRunning)
+            {
+                await Task.Delay(30.SecToMillis(), cancellationToken);
+                
+                Console.WriteLine("Scheduling long running task for uninstalling modules");
+                var result =
+                    await _commandRouter.RouteAsync<CleanModulesReadyForUninstallCommand, Response>(
+                        new CleanModulesReadyForUninstallCommand(), cancellationToken);
+
             }
         }
 

@@ -3,6 +3,7 @@ namespace NextPipe.Persistence.Entities.ProcessLock
     public enum NextPipeProcessType
     {
         CleanUpHangingTasks,
-        InstallPendingModulesTasks
+        InstallPendingModulesTask,
+        CleanModulesReadyForUninstallTask
     }
 }

@@ -18,7 +18,9 @@ namespace NextPipe.Core.Events.Handlers
 {
     public class ModulesEventHandler : 
         IEventHandler<InstallPendingModulesEvent>,
-        IEventHandler<InstallModuleEvent>
+        IEventHandler<InstallModuleEvent>,
+        IEventHandler<UninstallModuleEvent>,
+        IEventHandler<CleanModulesReadyForUninstallEvent>
     {
         private readonly IModuleRepository _moduleRepository;
         private readonly ITasksRepository _tasksRepository;
@@ -47,6 +49,25 @@ namespace NextPipe.Core.Events.Handlers
             foreach (var module in result)
             {
                 await HandleAsync(new InstallModuleEvent(new Id(module.Id)), ct);
+            }
+        }
+        
+        public async Task HandleAsync(CleanModulesReadyForUninstallEvent evt, CancellationToken ct)
+        {
+            LogHandler.WriteLineVerbose($"{nameof(CleanModulesReadyForUninstallEvent)} received - Search and install all modules of {nameof(ModuleStatus)}.{nameof(ModuleStatus.Uninstall)}");
+
+            var result = await _moduleRepository.GetModulesByModuleStatus(ModuleStatus.Uninstall);
+
+            if (!result.Any())
+            {
+                LogHandler.WriteLineVerbose($"No modules are waiting to be uninstalled - Exiting {nameof(CleanModulesReadyForUninstallEvent)}");
+                return;
+            }
+            
+            // Uninstall the modules of status uninstall
+            foreach (var module in result)
+            {
+                await HandleAsync(new UninstallModuleEvent(new Id(module.Id)), ct);
             }
         }
 
@@ -100,6 +121,11 @@ namespace NextPipe.Core.Events.Handlers
                     await _tasksRepository.FinishTask(id.Value, TaskStatus.Failed, logHandler.GetLog());
                 },
                 async (id, logHandler) => { await _tasksRepository.AppendLog(id.Value, logHandler.GetLog()); }));
+        }
+
+        public async Task HandleAsync(UninstallModuleEvent evt, CancellationToken ct)
+        {
+            Console.WriteLine("Uninstall that module or attach to task for restart");
         }
     }
 }

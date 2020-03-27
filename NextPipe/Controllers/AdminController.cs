@@ -27,6 +27,5 @@ namespace NextPipe.Controllers
         {
             return StatusCode(200);
         }
-        
     }
 }

@@ -3,7 +3,7 @@ using SimpleSoft.Mediator;
 
 namespace NextPipe.Core.Commands.Commands.ProcessLockCommands
 {
-    public class InstallPendingModulesCommand : Command<Response>
+    public class InstallPendingModulesCommand : BaseCommand
     {
         
     }

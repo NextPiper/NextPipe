@@ -19,7 +19,8 @@ namespace NextPipe.Core.Commands.Handlers
 {
     public class BackgroundProcessCommandHandler : CommandHandlerBase,
         ICommandHandler<CleanupHangingTasksCommand, Response>,
-        ICommandHandler<InstallPendingModulesCommand, Response>
+        ICommandHandler<InstallPendingModulesCommand, Response>,
+        ICommandHandler<CleanModulesReadyForUninstallCommand, Response>
     {
         private readonly IProcessLockRepository _processLockRepository;
         private readonly IKubectlHelper _kubectlHelper;
@@ -39,18 +40,23 @@ namespace NextPipe.Core.Commands.Handlers
         /// <returns></returns>
         public async Task<Response> HandleAsync(CleanupHangingTasksCommand cmd, CancellationToken ct)
         {
-            return await InitiateLongRunningProcess(NextPipeProcessType.CleanUpHangingTasks, nameof(CleanupHangingTasksCommand), async () =>
-            {
-                await _eventPublisher.PublishAsync(new CleanupHangingTasksEvent(), ct);
-            });
+            return await InitiateLongRunningProcess(NextPipeProcessType.CleanUpHangingTasks,
+                nameof(CleanupHangingTasksCommand),
+                async () => { await _eventPublisher.PublishAsync(new CleanupHangingTasksEvent(), ct); });
         }
         
         public async Task<Response> HandleAsync(InstallPendingModulesCommand cmd, CancellationToken ct)
         {
-            return await InitiateLongRunningProcess(NextPipeProcessType.InstallPendingModulesTasks, nameof(InstallPendingModulesCommand), async () =>
-                {
-                    await _eventPublisher.PublishAsync(new InstallPendingModulesEvent(), ct);
-                });
+            return await InitiateLongRunningProcess(NextPipeProcessType.InstallPendingModulesTask,
+                nameof(InstallPendingModulesCommand),
+                async () => { await _eventPublisher.PublishAsync(new InstallPendingModulesEvent(), ct); });
+        }
+        
+        public async Task<Response> HandleAsync(CleanModulesReadyForUninstallCommand cmd, CancellationToken ct)
+        {
+            return await InitiateLongRunningProcess(NextPipeProcessType.CleanModulesReadyForUninstallTask,
+                nameof(CleanModulesReadyForUninstallCommand),
+                async () => { await _eventPublisher.PublishAsync(new CleanModulesReadyForUninstallEvent(), ct); });
         }
 
         private async Task<Response> InitiateLongRunningProcess(NextPipeProcessType processType, string cmdName, Func<Task> func)
