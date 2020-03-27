@@ -76,18 +76,5 @@ namespace NextPipe.Controllers
 
             return ReadDefaultQuery(result);
         }
-
-        [HttpPost]
-        [Route("trial")]
-        public async Task<IActionResult> Trial()
-        {
-            await _kubectlHelper.InstallModule(KubectlHelper.CreateModuleDeployment(
-                "nginx",
-                "nginx",
-                3));
-
-
-            return StatusCode(200);
-        }
     }
 }
