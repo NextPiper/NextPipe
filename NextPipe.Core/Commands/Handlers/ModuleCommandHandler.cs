@@ -15,15 +15,15 @@ using TaskStatus = NextPipe.Persistence.Entities.TaskStatus;
 namespace NextPipe.Core.Commands.Handlers
 {
     public class ModuleCommandHandler : CommandHandlerBase, 
-        ICommandHandler<RequestInstallModule, TaskRequestResponse>
+        ICommandHandler<RequestInstallModule, TaskRequestResponse>,
+        ICommandHandler<RequestDeleteModuleCommand, Response>,
+        ICommandHandler<ScaleModuleCommand, Response>
     {
         private readonly IModuleRepository _moduleRepository;
-        private readonly ITasksRepository _tasksRepository;
 
         public ModuleCommandHandler(IEventPublisher eventPublisher, IModuleRepository moduleRepository, ITasksRepository tasksRepository) : base(eventPublisher)
         {
             _moduleRepository = moduleRepository;
-            _tasksRepository = tasksRepository;
         }
 
         public async Task<TaskRequestResponse> HandleAsync(RequestInstallModule cmd, CancellationToken ct)
@@ -35,7 +35,7 @@ namespace NextPipe.Core.Commands.Handlers
             // The module which is being requested for install has a image which is already in the system.
             if (!(imageResult is null) && moduleNameResult is null)
             {
-                return new TaskRequestResponse(imageResult.Id, $"The module requested to be installed is already present in a different deployment. The image --insertimage is already running in --insertmodulename  ",false);
+                return new TaskRequestResponse(imageResult.Id, $"The module requested to be installed is already present in a different deployment. The image {imageResult.ImageName} is already running in {imageResult.ModuleName}",false);
             }
             // The module which is being requested for install has a duplicate deployment name.
             if (imageResult is null && !(moduleNameResult is null))
@@ -61,7 +61,44 @@ namespace NextPipe.Core.Commands.Handlers
             });
             
             return TaskRequestResponse.TaskRequestAccepted(moduleId.Value, "Module was accepted and is awaiting upstart");
+        }
 
+        public async Task<Response> HandleAsync(RequestDeleteModuleCommand cmd, CancellationToken ct)
+        {
+            var module = await _moduleRepository.GetById(cmd.Id.Value);
+
+            if (module.ModuleStatus == ModuleStatus.Installing || module.ModuleStatus == ModuleStatus.Uninstalling)
+            {
+                return Response.Unsuccessful("Can't delete module while it is installing or uninstalling. Wait until ModulStatus changes");
+            }
+            
+            var result = await _moduleRepository.SetModuleStatusUninstalling(cmd.Id.Value);
+
+            if (result == null)
+            {
+                return Response.Unsuccessful();
+            }
+            
+            return Response.Success();
+        }
+
+        public async Task<Response> HandleAsync(ScaleModuleCommand cmd, CancellationToken ct)
+        {
+            var module = await _moduleRepository.GetById(cmd.Id.Value);
+
+            if (module.ModuleStatus !=  ModuleStatus.Running)
+            {
+                return Response.Unsuccessful("Can't scale module with a moduleStatus different than running");
+            }
+            
+            var result = await _moduleRepository.UpdateDesiredReplicas(cmd.Id.Value, cmd.Replicas.Value);
+
+            if (result == null)
+            {
+                return Response.Unsuccessful();
+            }
+            
+            return Response.Success();
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -14,6 +15,9 @@ namespace NextPipe.Persistence.Repositories
         Task<Module> GetModuleByImageName(string imageName);
         Task AppendLog(Guid id, string log);
         Task<Module> GetModuleByModuleName(string moduleName);
+        Task<Module> SetModuleStatusUninstalling(Guid moduleId);
+        Task<Module> UpdateDesiredReplicas(Guid moduleId, int replicas);
+        Task<IEnumerable<Module>> GetModulesByModuleStatus(ModuleStatus moduleStatus);
     }
 
     public class ModuleRepository : BaseMongoRepository<Module>, IModuleRepository
@@ -56,6 +60,23 @@ namespace NextPipe.Persistence.Repositories
         public async Task<Module> GetModuleByModuleName(string moduleName)
         {
             return await Collection().Find(t => t.ModuleName.Equals(moduleName)).SingleOrDefaultAsync();
+        }
+
+        public async Task<Module> SetModuleStatusUninstalling(Guid moduleId)
+        {
+            return await Collection().FindOneAndUpdateAsync(t => t.Id == moduleId,
+                Update.Set(t => t.ModuleStatus, ModuleStatus.Uninstall));
+        }
+
+        public async Task<Module> UpdateDesiredReplicas(Guid moduleId, int replicas)
+        {
+            return await Collection().FindOneAndUpdateAsync(t => t.Id == moduleId,
+                Update.Set(t => t.ModuleReplicas, replicas));
+        }
+
+        public async Task<IEnumerable<Module>> GetModulesByModuleStatus(ModuleStatus moduleStatus)
+        {
+            return await Collection().Find(t => t.ModuleStatus == moduleStatus).ToListAsync();
         }
     }
 }

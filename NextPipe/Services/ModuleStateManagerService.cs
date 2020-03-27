@@ -22,7 +22,7 @@ namespace NextPipe.Services
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             IsRunning = true;
-            
+            ResolveModulesWithRequestToChange(cancellationToken);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
@@ -35,14 +35,13 @@ namespace NextPipe.Services
         {
             while (IsRunning)
             {
-                await Task.Delay(1.MinToMillis(), cancellationToken);
+                await Task.Delay(15.SecToMillis(), cancellationToken);
                 
-                Console.WriteLine("Running check to change models with states: Pending, Uninstall");
+                Console.WriteLine("Scheduling long running task for installing pending modules");
 
                 var result =
-                    await _commandRouter.RouteAsync<ResolveModuleWithRequestForChangeCommand, Response>(
-                        new ResolveModuleWithRequestForChangeCommand(),cancellationToken);
-
+                    await _commandRouter.RouteAsync<InstallPendingModulesCommand, Response>(
+                        new InstallPendingModulesCommand(),cancellationToken);
             }
         }
 

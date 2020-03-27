@@ -6,6 +6,7 @@ using NextPipe.Core.Commands.Commands.ProcessLockCommands;
 using NextPipe.Core.Domain.NextPipeTask.ValueObject;
 using NextPipe.Core.Domain.SharedValueObjects;
 using NextPipe.Core.Events.Events;
+using NextPipe.Core.Events.Events.ModuleEvents;
 using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
 using NextPipe.Messaging.Infrastructure.Contracts;
@@ -17,7 +18,8 @@ using SimpleSoft.Mediator;
 namespace NextPipe.Core.Commands.Handlers
 {
     public class BackgroundProcessCommandHandler : CommandHandlerBase,
-        ICommandHandler<CleanupHangingTasksCommand, Response>
+        ICommandHandler<CleanupHangingTasksCommand, Response>,
+        ICommandHandler<InstallPendingModulesCommand, Response>
     {
         private readonly IProcessLockRepository _processLockRepository;
         private readonly IKubectlHelper _kubectlHelper;
@@ -37,23 +39,38 @@ namespace NextPipe.Core.Commands.Handlers
         /// <returns></returns>
         public async Task<Response> HandleAsync(CleanupHangingTasksCommand cmd, CancellationToken ct)
         {
+            return await InitiateLongRunningProcess(NextPipeProcessType.CleanUpHangingTasks, nameof(CleanupHangingTasksCommand), async () =>
+            {
+                await _eventPublisher.PublishAsync(new CleanupHangingTasksEvent(), ct);
+            });
+        }
+        
+        public async Task<Response> HandleAsync(InstallPendingModulesCommand cmd, CancellationToken ct)
+        {
+            return await InitiateLongRunningProcess(NextPipeProcessType.InstallPendingModulesTasks, nameof(InstallPendingModulesCommand), async () =>
+                {
+                    await _eventPublisher.PublishAsync(new InstallPendingModulesEvent(), ct);
+                });
+        }
+
+        private async Task<Response> InitiateLongRunningProcess(NextPipeProcessType processType, string cmdName, Func<Task> func)
+        {
             // Check if there exists a Process of respective type which is already running...
-            LogHandler.WriteLineVerbose($"Request processLock for processType: {nameof(NextPipeProcessType.CleanUpHangingTasks)}");
-            var processLock = await RequestProcessLock(NextPipeProcessType.CleanUpHangingTasks);
+            LogHandler.WriteLineVerbose($"Request processLock for processType: {processType}");
+            var processLock = await RequestProcessLock(processType);
 
             if (processLock == null)
             {
                 // Request for process lock was not successful return unsuccesfull cmd and try new cleanup in 30 secs
-                LogHandler.WriteLineVerbose("Couldn't receive processLock, waiting for next clean up session");
+                LogHandler.WriteLineVerbose($"Couldn't receive processLock for type:{processType}, waiting for next {processType} session");
                 return Response.Unsuccessful();
             }
             
-            LogHandler.WriteLineVerbose("Process lock received publishing cleanup event!");
-            
-            // Successfully created process lock for this host for the requested processType
-            await _eventPublisher.PublishAsync(new CleanupHangingTasksEvent(), ct);
+            LogHandler.WriteLineVerbose($"ProcessLock of type: {processType} received for cmd: {cmdName}");
 
-            LogHandler.WriteLineVerbose("Clean up process done, Delete processLock");
+            await func();
+
+            LogHandler.WriteLineVerbose($"{processType} process done, deleting processLock with id: {processLock.Id}");
             // The process is done, remove the processLock
             await _processLockRepository.Delete(processLock.Id);
             
@@ -71,23 +88,25 @@ namespace NextPipe.Core.Commands.Handlers
             // Find process of processType
             var process =
                 await _processLockRepository.FindProcessLockByProcessType(processType);
-            
+
             if (process != null)
             {
                 LogHandler.WriteLineVerbose($"Process already running on host: {process.Hostname}");
                 // The process is already running - Make sure that the processLock is not assigned to a dead host
                 var hostPods =
-                    await _kubectlHelper.GetPodsByCustomNameFilter(NEXTPIPE_DEPLOYMENT_NAME, ShellHelper.IdenticalStart);
+                    await _kubectlHelper.GetPodsByCustomNameFilter(NEXTPIPE_DEPLOYMENT_NAME,
+                        ShellHelper.IdenticalStart);
 
                 LogHandler.WriteLineVerbose("Running hosts");
                 foreach (var hostPod in hostPods)
                 {
                     Console.WriteLine($"- {hostPod.Metadata.Name}");
                 }
-                
+
                 if (!hostPods.Any(t => t.Metadata.Name.Trim().ToLower().Equals(process.Hostname.Trim().ToLower())))
                 {
-                    LogHandler.WriteLineVerbose($"Process was hanging on dead host: {process.Hostname}. Rescheduling the process to host: {new Hostname().Value}");
+                    LogHandler.WriteLineVerbose(
+                        $"Process was hanging on dead host: {process.Hostname}. Rescheduling the process to host: {new Hostname().Value}");
                     // The hostname of the process does not match any of the current hosts
                     // Re-schedule the CleanupHangingTaskCommand by deleting and inserting a new processLock
                     // Attached to this host
@@ -98,7 +117,7 @@ namespace NextPipe.Core.Commands.Handlers
                         ProcessId = new Id().Value,
                         NextPipeProcessType = NextPipeProcessType.CleanUpHangingTasks
                     }, process);
-                } 
+                }
             }
             else
             {
@@ -113,6 +132,7 @@ namespace NextPipe.Core.Commands.Handlers
                     NextPipeProcessType = NextPipeProcessType.CleanUpHangingTasks
                 });
             }
+
             return null;
         }
     }

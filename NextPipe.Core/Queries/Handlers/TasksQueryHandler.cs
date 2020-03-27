@@ -19,7 +19,6 @@ namespace NextPipe.Core.Queries.Handlers
             _tasksRepository = tasksRepository;
         }
 
-
         public async Task<NextPipeTask> HandleAsync(GetTaskByIdQuery query, CancellationToken ct)
         {
             return await _tasksRepository.GetTaskByTaskId(query.TaskId);

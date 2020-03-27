@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NextPipe.Core.Commands.Commands.ModuleCommands;
+using NextPipe.Core.Domain.Module.ValueObjects;
+using NextPipe.Core.Kubernetes;
 using NextPipe.Core.Queries.Queries;
 using NextPipe.Messaging.Infrastructure.Contracts;
 using NextPipe.Persistence.Entities.NextPipeModules;
@@ -15,13 +17,16 @@ namespace NextPipe.Controllers
     [Route("core/modules")]
     public class ModuleController : BaseController
     {
-        public ModuleController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter) : base(logger, queryRouter, commandRouter)
+        private readonly IKubectlHelper _kubectlHelper;
+
+        public ModuleController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter,IKubectlHelper kubectlHelper) : base(logger, queryRouter, commandRouter)
         {
+            _kubectlHelper = kubectlHelper;
         }
         
         [HttpPost]
         [Route("")]
-        public async Task<IActionResult> RequestInstallModule(string imageName, int amountOfReplicas, string moduleName)
+        public async Task<IActionResult> InstallModule(string imageName, int amountOfReplicas, string moduleName)
         {
             var result =
                 await RouteAsync<RequestInstallModule, TaskRequestResponse>(
@@ -33,6 +38,24 @@ namespace NextPipe.Controllers
             }
 
             return StatusCode(409, result.Message);
+        }
+
+        [HttpPut]
+        [Route("{id}")]
+        public async Task<IActionResult> ScaleModule(Guid id, int replicas)
+        {
+            var result = await RouteAsync<ScaleModuleCommand, Response>(new ScaleModuleCommand(id, replicas));
+
+            return ReadDefaultResponse(result, failureCode: 400);
+        }
+
+        [HttpDelete]
+        [Route("{id}")]
+        public async Task<IActionResult> DeleteModule(Guid id)
+        {
+            var result = await RouteAsync<RequestDeleteModuleCommand, Response>(new RequestDeleteModuleCommand(id));
+
+            return ReadDefaultResponse(result, failureCode:400);
         }
 
         [HttpGet]
@@ -53,7 +76,18 @@ namespace NextPipe.Controllers
 
             return ReadDefaultQuery(result);
         }
-        
-        
+
+        [HttpPost]
+        [Route("trial")]
+        public async Task<IActionResult> Trial()
+        {
+            await _kubectlHelper.InstallModule(KubectlHelper.CreateModuleDeployment(
+                "nginx",
+                "nginx",
+                3));
+
+
+            return StatusCode(200);
+        }
     }
 }

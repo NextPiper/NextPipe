@@ -9,6 +9,7 @@ using k8s;
 using k8s.Models;
 using Microsoft.AspNetCore.Http;
 using NextPipe.Core.Documents;
+using NextPipe.Utilities.Documents.Responses;
 
 namespace NextPipe.Core.Kubernetes
 {
@@ -16,6 +17,7 @@ namespace NextPipe.Core.Kubernetes
     {
         V1StatefulSet GetStatefulset(string statefulsetName, string nameSpace = "default");
         Task<V1Service> GetService(string serviceName, string nameSpace = "default");
+        Task<V1Deployment> GetDeployment(string deploymentName, string nameSpace = "default");
         bool ValidateStatefulsetIsRunning(string statefulsetName, string nameSpace = "default");
         int GetNumberOfStatefulsetReadyReplicas(string statefulsetName, string nameSpace = "default");
         Task<IEnumerable<V1Pod>> GetPodsByCustomNameFilter(string podName, Func<string, string, bool> podFilter,
@@ -25,7 +27,7 @@ namespace NextPipe.Core.Kubernetes
         Task DeletePVCList(IEnumerable<V1PersistentVolumeClaim> pvcList, string nameSpace = "default");
         Task InstallService(V1Service service, string nameSpace = "default");
         Task<string> DeleteService(string name, string nameSpace = "default");
-        Task InstallModule(V1Deployment moduleDeployment, string nameSpace = "default");
+        Task<Response> InstallModule(V1Deployment moduleDeployment, string nameSpace = "default");
         
 
     }
@@ -50,6 +52,13 @@ namespace NextPipe.Core.Kubernetes
             var result = await _client.ListNamespacedServiceWithHttpMessagesAsync(nameSpace);
 
             return result.Body.Items.SingleOrDefault(t => t.Metadata.Name == serviceName);
+        }
+
+        public async Task<V1Deployment> GetDeployment(string deploymentName, string nameSpace = "default")
+        {
+            var result = await _client.ListNamespacedDeploymentWithHttpMessagesAsync(nameSpace);
+
+            return result.Body.Items.SingleOrDefault(t => t.Metadata.Name == deploymentName);
         }
 
         public bool ValidateStatefulsetIsRunning(string statefulsetName, string nameSpace = "default")
@@ -170,9 +179,26 @@ namespace NextPipe.Core.Kubernetes
         }
 
 
-        public async Task InstallModule(V1Deployment moduleDeployment, string nameSpace = "default")
+        public async Task<Response> InstallModule(V1Deployment moduleDeployment, string nameSpace = "default")
         {
-            await _client.CreateNamespacedDeploymentWithHttpMessagesAsync(moduleDeployment, nameSpace);
+            // First check if the moduleDeployment is already deployed in the system
+            var modules = await GetDeployment(moduleDeployment.Metadata.Name);
+
+            if (modules != null)
+            {
+                // There is already a module running under the specified deploymentName
+                return Response.Unsuccessful($"There is already a module running under the specified deploymentName: {moduleDeployment}");
+            }
+            try
+            {
+                await _client.CreateNamespacedDeploymentWithHttpMessagesAsync(moduleDeployment, nameSpace);
+            }
+            catch (Exception e)
+            {
+                return Response.Unsuccessful(e.Message);
+            }
+            
+            return Response.Success();
         }
         
         public static string KubectlApplyRabbitService()

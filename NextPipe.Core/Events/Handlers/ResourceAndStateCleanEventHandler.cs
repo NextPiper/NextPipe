@@ -7,12 +7,14 @@ using System.Threading.Tasks;
 using NextPipe.Core.Domain.NextPipeTask.ValueObject;
 using NextPipe.Core.Domain.SharedValueObjects;
 using NextPipe.Core.Events.Events;
+using NextPipe.Core.Events.Events.ModuleEvents;
 using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
 using NextPipe.Core.ValueObjects;
 using NextPipe.Messaging.Infrastructure.Contracts;
 using NextPipe.Persistence.Entities;
 using NextPipe.Persistence.Entities.Metadata;
+using NextPipe.Persistence.Entities.NextPipeModules;
 using NextPipe.Persistence.Repositories;
 using SimpleSoft.Mediator;
 using TaskStatus = NextPipe.Persistence.Entities.TaskStatus;
@@ -24,18 +26,19 @@ namespace NextPipe.Core.Events.Handlers
         private readonly ITasksRepository _tasksRepository;
         private readonly IKubectlHelper _kubectlHelper;
         private readonly IEventPublisher _eventPublisher;
+        private readonly IModuleRepository _moduleRepository;
         private const string NEXTPIPE_DEPLOYMENT = "nextpipe-deployment";
 
-        public ResourceAndStateCleanEventHandler(ITasksRepository tasksRepository, IKubectlHelper kubectlHelper, IEventPublisher eventPublisher)
+        public ResourceAndStateCleanEventHandler(ITasksRepository tasksRepository, IKubectlHelper kubectlHelper, IEventPublisher eventPublisher, IModuleRepository moduleRepository)
         {
             _tasksRepository = tasksRepository;
             _kubectlHelper = kubectlHelper;
             _eventPublisher = eventPublisher;
+            _moduleRepository = moduleRepository;
         }
         
         public async Task HandleAsync(CleanupHangingTasksEvent evt, CancellationToken ct)
         {
-            
             // Find all running tasks in system
             var runningTasks = await _tasksRepository.GetAllRunningTasks(0, 10000);
             LogHandler.WriteLineVerbose($"Fetching running tasks: {runningTasks.Count()}");
@@ -69,9 +72,61 @@ namespace NextPipe.Core.Events.Handlers
                 case TaskType.RabbitInfrastructureUninstall:
                     await CleanUpRabbitInfrastructureUninstall(task);
                     break;
+                case TaskType.ModuleInstall:
+                    await CleanUpModuleInstallTasks(task);
+                    break;
                 default:
                      return;
             }
+        }
+
+        private async Task CleanUpModuleInstallTasks(NextPipeTask task)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine($"Task: {task.TaskId} of type: {task.TaskType} is scheduled on dead host: {task.Hostname} - Doing Cleanup");
+            // Check if the reference module was resolved to either running or failed, if so resolve the task into state failed/success respectively
+            var module = await _moduleRepository.GetById(task.ReferenceId);
+            
+            if (module == null)
+            {
+                // The module reference was null, an is such not a part of the system anymore, the installTask is thus by definition done and failed
+                builder.AppendLine(
+                    $"ModuleId: {task.ReferenceId} can't be found for {task.TaskType} - taskId: {task.TaskId} terminating task with {nameof(TaskStatus)}.{nameof(TaskStatus.Failed)}");
+                await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Failed, task.Logs + builder.ToString());
+                return;
+            }
+
+            // Check if the task merely needs to be closed based on module status
+            switch (module.ModuleStatus)
+            {
+                case ModuleStatus.Running:
+                    builder.AppendLine(
+                        $"The associated module with id:{module.Id} managed to get into a running state. Terminating task with {nameof(TaskStatus)}.{nameof(TaskStatus.Success)}");
+                    await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Success, task.Logs + builder.ToString());
+                    return;
+                case ModuleStatus.Failed:
+                    builder.AppendLine(
+                        $"The associated module with id:{module.Id} is in failed state. Terminating task with {nameof(TaskStatus)}.{nameof(TaskStatus.Success)}");
+                    await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Failed, task.Logs + builder.ToString());
+                    return;
+            }
+            
+            if (task.Restarts >= 1)
+            {
+                // We already went through one restart. However the we dont know exactly why it will not install or if it is safe to clean up
+                // fx. if the restart failed because a resource already exists in kubernetes, we do not neccesarily know if that resource is safe to delete
+                // the user will have to see the logs in order to resolve the issue
+                builder.AppendLine("Suspending task... Restart limit 1/1 reached. See logs for failure reason and check if manuel cleanup is required");
+                await _moduleRepository.UpdateModuleStatus(module.Id, ModuleStatus.Failed);
+                await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Failed, task.Logs + builder.ToString());
+            }
+            
+            // Restart the task in order to see if we can resolve the issues from previous dead host
+            var host = new Hostname();
+            builder.AppendLine($"Task was restarted due to previous host death. Restart 1/1 - Attaching task to host: {host.Value}");
+            await _tasksRepository.IncrementRestarts(task.TaskId, host.Value, task.Logs + builder.ToString());
+            await _eventPublisher.PublishAsync(new InstallModuleEvent(new Id(module.Id), new Id(task.Id)));
+
         }
 
         private async Task CleanUpRabbitInfrastructureDeploy(NextPipeTask task)

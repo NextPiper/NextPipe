@@ -26,7 +26,16 @@ namespace NextPipe.Configuration
         {
            services.UseMongoDBConfiguration(configuration);
            services.UseRabbitMQDeploymentConfiguration(configuration);
+           services.UseControlPlaneAdminConfiguration(configuration);
            return services;
+        }
+
+        public static IServiceCollection UseControlPlaneAdminConfiguration(this IServiceCollection services,
+            IConfiguration configuration)
+        {
+            services.Configure<ControlPlaneAdminConfiguration>(
+                configuration.GetSection(nameof(ControlPlaneAdminConfiguration)));
+            return services;
         }
     }
 }

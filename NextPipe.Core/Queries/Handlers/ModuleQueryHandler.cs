@@ -14,6 +14,11 @@ namespace NextPipe.Core.Queries.Handlers
     {
         private readonly IModuleRepository _moduleRepository;
         
+        public ModuleQueryHandler(IModuleRepository moduleRepository)
+        {
+            _moduleRepository = moduleRepository;
+        }
+
         public async Task<IEnumerable<Module>> HandleAsync(GetModulesPagedQuery query, CancellationToken ct)
         {
             return await _moduleRepository.GetPaged(query.Page, query.PageSize);

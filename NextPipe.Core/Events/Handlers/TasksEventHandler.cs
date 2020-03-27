@@ -17,7 +17,6 @@ namespace NextPipe.Core.Events.Handlers
 {
     public class TasksEventHandler : 
         IEventHandler<InitializeInfrastructureTaskRequestEvent>,
-        IEventHandler<InstallModuleTaskRequestEvent>,
         IEventHandler<UninstallInfrastructureTaskRequestEvent>
     {
         private readonly ITasksRepository _tasksRepository;
@@ -85,16 +84,6 @@ namespace NextPipe.Core.Events.Handlers
         private async Task FailureCallback(Id taskId, ILogHandler logHandler)
         {
             await _tasksRepository.FinishTask(taskId.Value, TaskStatus.Failed, logHandler.GetLog());
-        }
-
-        public async Task HandleAsync(InstallModuleTaskRequestEvent evt, CancellationToken ct)
-        {
-            await _moduleRepository.UpdateModuleStatus(evt.ReferenceId.Value, ModuleStatus.Installing);
-            await _tasksRepository.UpdateTaskQueueStatus(evt.TaskId.Value, QueueStatus.Running);
-            await _tasksRepository.UpdateTaskStatus(evt.TaskId.Value, TaskStatus.Running);
-            Console.WriteLine("Event handler was hit");
-            await _moduleInstallManager.DeployModule(new ModuleInstallManagerConfig(evt.TaskId, evt.ModuleReplicas,
-                evt.ModuleName, evt.ImageName, SuccessCallback, FailureCallback, UpdateCallback), true);
         }
     }
 }
