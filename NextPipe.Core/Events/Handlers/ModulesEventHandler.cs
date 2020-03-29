@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NextPipe.Core.Domain.Module.KubernetesModule;
 using NextPipe.Core.Domain.Module.ModuleManagers;
 using NextPipe.Core.Domain.Module.ValueObjects;
 using NextPipe.Core.Domain.NextPipeTask.ValueObject;
@@ -9,6 +11,7 @@ using NextPipe.Core.Domain.SharedValueObjects;
 using NextPipe.Core.Events.Events.ArchiveEvents;
 using NextPipe.Core.Events.Events.ModuleEvents;
 using NextPipe.Core.Helpers;
+using NextPipe.Core.Kubernetes;
 using NextPipe.Messaging.Infrastructure.Contracts;
 using NextPipe.Persistence.Entities;
 using NextPipe.Persistence.Entities.ArchivedObjects;
@@ -23,20 +26,23 @@ namespace NextPipe.Core.Events.Handlers
         IEventHandler<InstallPendingModulesEvent>,
         IEventHandler<InstallModuleEvent>,
         IEventHandler<UninstallModuleEvent>,
-        IEventHandler<CleanModulesReadyForUninstallEvent>
+        IEventHandler<CleanModulesReadyForUninstallEvent>,
+        IEventHandler<HealthCheckModulesEvents>
     {
         private readonly IModuleRepository _moduleRepository;
         private readonly ITasksRepository _tasksRepository;
         private readonly IModuleManager _moduleManager;
         private readonly IEventPublisher _eventPublisher;
+        private readonly IKubectlHelper _kubectlHelper;
         private readonly IArchiveRepository _archiveRepository;
         
-        public ModulesEventHandler(IModuleRepository moduleRepository, ITasksRepository tasksRepository, IModuleManager moduleManager, IEventPublisher eventPublisher)
+        public ModulesEventHandler(IModuleRepository moduleRepository, ITasksRepository tasksRepository, IModuleManager moduleManager, IEventPublisher eventPublisher, IKubectlHelper kubectlHelper)
         {
             _moduleRepository = moduleRepository;
             _tasksRepository = tasksRepository;
             _moduleManager = moduleManager;
             _eventPublisher = eventPublisher;
+            _kubectlHelper = kubectlHelper;
         }
         
         public async Task HandleAsync(InstallPendingModulesEvent evt, CancellationToken ct)
@@ -92,7 +98,7 @@ namespace NextPipe.Core.Events.Handlers
             _moduleManager.SetVerboseLogging(true);
             await _moduleManager.DeployModule(new ModuleManagerConfig(
                 new Id(task.TaskId), 
-                new ModuleReplicas(module.ModuleReplicas),
+                new ModuleReplicas(module.DesiredReplicas),
                 new ModuleName(module.ModuleName),
                 new ImageName(module.ImageName),
                 async (id, logHandler) =>
@@ -118,7 +124,7 @@ namespace NextPipe.Core.Events.Handlers
             _moduleManager.SetVerboseLogging(true);
 
             // Maybe cleanup such that we do not need to pass alot of parameters which are redundant. We could make same design as rabbitDeploymentManager...
-            await _moduleManager.UninstallModule(new ModuleManagerConfig(evt.TaskId, new ModuleReplicas(removeModule.ModuleReplicas), 
+            await _moduleManager.UninstallModule(new ModuleManagerConfig(evt.TaskId, new ModuleReplicas(removeModule.DesiredReplicas), 
                 new ModuleName(removeModule.ModuleName), new ImageName(removeModule.ImageName),
                 async (id, logHandler) =>
                 {
@@ -160,6 +166,61 @@ namespace NextPipe.Core.Events.Handlers
             }
 
             return task;
+        }
+
+        public async Task HandleAsync(HealthCheckModulesEvents evt, CancellationToken ct)
+        {
+            // Get all running modules and their respective replicas
+            var liveModules = await _kubectlHelper.GetLiveModules();
+            var npModules = await _moduleRepository.GetRunningModules();
+            
+            // Update health status from kubernetes
+            await UpdateHealthStatus(liveModules, npModules);
+            // Check that the desired number of replicas is reflected in kubernetes
+            await ValidateReplicaAggrement(liveModules, npModules);
+        }
+
+        private async Task UpdateHealthStatus(IEnumerable<KubernetesModule> liveModules, IEnumerable<Module> npModules)
+        {
+            // Update number of ready replicas - if a replica is not ready check if there is any status why and update as well
+            foreach (var npModule in npModules)
+            {
+                // Find the corresponding live module
+                var liveModule = liveModules.SingleOrDefault(t => t.Deployment.Metadata.Name.Equals(npModule.ModuleName));
+
+                if (liveModule != null)
+                {
+                    // We have found the corresponding liveModule do all cross checking and log fetching and update repository in the end...
+                    // <----
+                }
+            } 
+        } 
+
+        private async Task ValidateReplicaAggrement(IEnumerable<KubernetesModule> liveModules, IEnumerable<Module> npModules)
+        {
+            foreach (var npModule in npModules)
+            {
+                // Find the corresponding live module
+                var liveModule = liveModules.SingleOrDefault(t => t.Deployment.Metadata.Name.Equals(npModule.ModuleName));
+
+                if (liveModule != null) // Found the corresponding module
+                {
+                    if (liveModule.Deployment.Spec.Replicas.Value != npModule.DesiredReplicas)
+                    {
+                        // Desired replicas has changed update kubernetes accordingly
+                        var response = await _kubectlHelper.ScaleDeployment(liveModule.Deployment.Metadata.Name,
+                            new ModuleReplicas(npModule.DesiredReplicas));
+
+                        if (!response.IsSuccessful)
+                        {
+                            // Log that we tried to scale the module but it did not work
+                            await _moduleRepository.AppendLog(npModule.Id,
+                                npModule.Logs +
+                                $"\nTried to scale module replicas from {liveModule.Deployment.Spec.Replicas.Value} to {npModule.DesiredReplicas} but received an error: \n ***** \n {response.Message} \n*****\n");
+                        }
+                    }
+                }
+            }
         }
     }
 }

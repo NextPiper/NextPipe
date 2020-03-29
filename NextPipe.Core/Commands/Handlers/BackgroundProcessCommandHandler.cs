@@ -23,7 +23,8 @@ namespace NextPipe.Core.Commands.Handlers
         ICommandHandler<InstallPendingModulesCommand, Response>,
         ICommandHandler<CleanModulesReadyForUninstallCommand, Response>,
         ICommandHandler<ArchiveModulesCommand, Response>,
-        ICommandHandler<ArchiveTasksCommand, Response>
+        ICommandHandler<ArchiveTasksCommand, Response>,
+        ICommandHandler<HealthCheckModulesCommand, Response>
     {
         private readonly IProcessLockRepository _processLockRepository;
         private readonly IKubectlHelper _kubectlHelper;
@@ -74,6 +75,13 @@ namespace NextPipe.Core.Commands.Handlers
             return await InitiateLongRunningProcess(NextPipeProcessType.ArchiveCompletedTasks,
                 nameof(ArchiveTasksCommand),
                 async () => { await _eventPublisher.PublishAsync(new ArchiveTasksEvent(), ct); });
+        }
+        
+        public async Task<Response> HandleAsync(HealthCheckModulesCommand cmd, CancellationToken ct)
+        {
+            return await InitiateLongRunningProcess(NextPipeProcessType.HealthCheckRunningModules,
+                nameof(HealthCheckModulesCommand),
+                async () => { await _eventPublisher.PublishAsync(new HealthCheckModulesEvents(), ct); });
         }
 
         private async Task<Response> InitiateLongRunningProcess(NextPipeProcessType processType, string cmdName, Func<Task> func)

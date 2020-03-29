@@ -76,5 +76,15 @@ namespace NextPipe.Controllers
 
             return ReadDefaultQuery(result);
         }
+
+        [HttpGet]
+        [Route("trial")]
+        public async Task<IActionResult> Trial()
+        {
+            await _kubectlHelper.ScaleDeployment("nginx", new ModuleReplicas(3));
+            
+            
+            return new ObjectResult("");
+        }
     }
 }

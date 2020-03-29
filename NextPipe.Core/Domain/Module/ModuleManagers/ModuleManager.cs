@@ -29,7 +29,6 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
             _logHandler = new LogHandler();
         }
         
-        
         public async Task DeployModule(IModuleManagerConfig config)
         {
             _logHandler.AttachTaskIdAndUpdateHandler(config.TaskId, config.UpdateCallback);

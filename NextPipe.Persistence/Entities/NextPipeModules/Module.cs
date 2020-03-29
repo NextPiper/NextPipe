@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace NextPipe.Persistence.Entities.NextPipeModules
 {
@@ -11,7 +12,10 @@ namespace NextPipe.Persistence.Entities.NextPipeModules
         public string ImageName { get; set; }
         public string ModuleName { get; set; }
         public ModuleStatus ModuleStatus { get; set; }
-        public int ModuleReplicas { get; set; }
+        public int DesiredReplicas { get; set; }
+        public int CurrentReadyReplicas { get; set; } = 0;
+        public List<ReplicaStatus> ReplicaLogs { get; set; } = new List<ReplicaStatus>();
+        
         public string Logs { get; set; } = "";
 
     }

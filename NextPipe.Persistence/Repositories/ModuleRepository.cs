@@ -20,6 +20,8 @@ namespace NextPipe.Persistence.Repositories
         Task<Module> UpdateDesiredReplicas(Guid moduleId, int replicas);
         Task<IEnumerable<Module>> GetModulesByModuleStatus(ModuleStatus moduleStatus);
         Task<Module> DeleteAndReturnModule(Guid id);
+        Task<IEnumerable<Module>> GetRunningModules();
+        Task<Module> UpdateHealthStatus(Guid moduleId, int readyReplicas, IEnumerable<ReplicaStatus> replicaStatuses);
     }
 
     public class ModuleRepository : BaseMongoRepository<Module>, IModuleRepository
@@ -79,7 +81,7 @@ namespace NextPipe.Persistence.Repositories
         public async Task<Module> UpdateDesiredReplicas(Guid moduleId, int replicas)
         {
             return await Collection().FindOneAndUpdateAsync(t => t.Id == moduleId,
-                Update.Set(t => t.ModuleReplicas, replicas));
+                Update.Set(t => t.DesiredReplicas, replicas));
         }
 
         public async Task<IEnumerable<Module>> GetModulesByModuleStatus(ModuleStatus moduleStatus)
@@ -90,6 +92,19 @@ namespace NextPipe.Persistence.Repositories
         public async Task<Module> DeleteAndReturnModule(Guid id)
         {
             return await Collection().FindOneAndDeleteAsync(t => t.Id == id);
+        }
+
+        public async Task<IEnumerable<Module>> GetRunningModules()
+        {
+            return await Collection().Find(t => t.ModuleStatus == ModuleStatus.Running).ToListAsync();
+        }
+
+        public async Task<Module> UpdateHealthStatus(Guid moduleId, int readyReplicas, IEnumerable<ReplicaStatus> replicaStatuses)
+        {
+            return await Collection().FindOneAndUpdateAsync(t => t.Id == moduleId,
+                Update
+                    .Set(t => t.CurrentReadyReplicas, readyReplicas)
+                    .Set(t => t.ReplicaLogs, replicaStatuses));
         }
     }
 }

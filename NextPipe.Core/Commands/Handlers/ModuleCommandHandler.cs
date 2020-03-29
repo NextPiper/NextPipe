@@ -57,7 +57,7 @@ namespace NextPipe.Core.Commands.Handlers
                 ModuleStatus = ModuleStatus.Pending,
                 ImageName = cmd.ImageName.Value,
                 ModuleName = cmd.ModuleName.Value,
-                ModuleReplicas = cmd.ModuleReplicas.Value
+                DesiredReplicas = cmd.ModuleReplicas.Value
             });
             
             return TaskRequestResponse.TaskRequestAccepted(moduleId.Value, "Module was accepted and is awaiting upstart");

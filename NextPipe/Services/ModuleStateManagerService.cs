@@ -24,6 +24,7 @@ namespace NextPipe.Services
             IsRunning = true;
             ResolvePendingModules(cancellationToken);
             ResolveUninstallModules(cancellationToken);
+            StartModuleHealthStatusBackgroundProcess(cancellationToken);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
@@ -55,7 +56,19 @@ namespace NextPipe.Services
                 var result =
                     await _commandRouter.RouteAsync<CleanModulesReadyForUninstallCommand, Response>(
                         new CleanModulesReadyForUninstallCommand(), cancellationToken);
+            }
+        }
 
+        private async Task StartModuleHealthStatusBackgroundProcess(CancellationToken cancellationToken)
+        {
+            while (IsRunning)
+            {
+                await Task.Delay(15.SecToMillis(), cancellationToken);
+                
+                Console.WriteLine("Scheduling long running task for health checking running modules");
+                var result =
+                    await _commandRouter.RouteAsync<HealthCheckModulesCommand, Response>(
+                        new HealthCheckModulesCommand());
             }
         }
 

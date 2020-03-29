@@ -8,7 +8,11 @@ using System.Xml.Schema;
 using k8s;
 using k8s.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.JsonPatch;
 using NextPipe.Core.Documents;
+using NextPipe.Core.Domain.Module.KubernetesModule;
+using NextPipe.Core.Domain.Module.ValueObjects;
+using NextPipe.Core.Helpers;
 using NextPipe.Utilities.Documents.Responses;
 
 namespace NextPipe.Core.Kubernetes
@@ -18,6 +22,7 @@ namespace NextPipe.Core.Kubernetes
         V1StatefulSet GetStatefulset(string statefulsetName, string nameSpace = "default");
         Task<V1Service> GetService(string serviceName, string nameSpace = "default");
         Task<V1Deployment> GetDeployment(string deploymentName, string nameSpace = "default");
+        Task<IEnumerable<V1Deployment>> GetDeployments(string nameSpace = "default");
         bool ValidateStatefulsetIsRunning(string statefulsetName, string nameSpace = "default");
         int GetNumberOfStatefulsetReadyReplicas(string statefulsetName, string nameSpace = "default");
         Task<IEnumerable<V1Pod>> GetPodsByCustomNameFilter(string podName, Func<string, string, bool> podFilter,
@@ -29,8 +34,9 @@ namespace NextPipe.Core.Kubernetes
         Task<string> DeleteService(string name, string nameSpace = "default");
         Task<Response> InstallModule(V1Deployment moduleDeployment, string nameSpace = "default");
         Task<Response> UninstallModule(string moduleName, string nameSpace = "default");
-
-
+        Task<IEnumerable<KubernetesModule>> GetLiveModules(string nameSpace = "default");
+        Task<IEnumerable<V1Pod>> GetDeploymentPods(string deploymentName, string nameSpace = "default");
+        Task<Response> ScaleDeployment(string deploymentName, ModuleReplicas moduleReplicas, string nameSpace = "default");
     }
     
     public class KubectlHelper : IKubectlHelper
@@ -60,6 +66,60 @@ namespace NextPipe.Core.Kubernetes
             var result = await _client.ListNamespacedDeploymentWithHttpMessagesAsync(nameSpace);
 
             return result.Body.Items.SingleOrDefault(t => t.Metadata.Name == deploymentName);
+        }
+
+        public async Task<IEnumerable<V1Deployment>> GetDeployments(string nameSpace = "default")
+        {
+            var result = await _client.ListNamespacedDeploymentWithHttpMessagesAsync(nameSpace);
+            return result.Body.Items;
+        }
+
+        public async Task<IEnumerable<KubernetesModule>> GetLiveModules(string nameSpace = "default")
+        {
+            var result = await GetDeployments();
+
+            var liveModules = new List<KubernetesModule>();
+
+            foreach (var deployment in result)
+            {
+                if (!deployment.Metadata.Name.Equals("nextpipe-deployment"))
+                {
+                    // Retrieve the respective pods for this deployment
+                    var deploymentPods = await GetDeploymentPods(deployment.Metadata.Name);
+                    liveModules.Add(new KubernetesModule(deployment, deploymentPods));   
+                }
+            }
+
+            return liveModules;
+        }
+
+        public async Task<IEnumerable<V1Pod>> GetDeploymentPods(string deploymentName, string nameSpace = "default")
+        {
+            var result =
+                await _client.ListNamespacedPodWithHttpMessagesAsync(nameSpace);
+
+            return result.Body.Items.Where(t => ShellHelper.IdenticalStart(t.Metadata.Name, $"{deploymentName}-")).ToList();
+        }
+
+        public async Task<Response> ScaleDeployment(string deploymentName, ModuleReplicas moduleReplicas, string nameSpace = "default")
+        {
+            // Create json patch for replicas
+            var jsonPatch = new JsonPatchDocument<V1Scale>();
+            // Insert replicas into patch
+            jsonPatch.Replace(e => e.Spec.Replicas, -1);
+            
+            var patch = new V1Patch(jsonPatch);
+            try
+            {
+                var result = await _client.PatchNamespacedDeploymentScaleWithHttpMessagesAsync(patch, deploymentName, nameSpace);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                return Response.Unsuccessful(e.Message);
+            }
+            
+            return Response.Success();
         }
 
         public bool ValidateStatefulsetIsRunning(string statefulsetName, string nameSpace = "default")

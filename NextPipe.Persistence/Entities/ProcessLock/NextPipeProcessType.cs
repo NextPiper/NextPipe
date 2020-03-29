@@ -6,6 +6,7 @@ namespace NextPipe.Persistence.Entities.ProcessLock
         InstallPendingModulesTask,
         CleanModulesReadyForUninstallTask,
         ArchiveModules,
-        ArchiveCompletedTasks
+        ArchiveCompletedTasks,
+        HealthCheckRunningModules
     }
 }
