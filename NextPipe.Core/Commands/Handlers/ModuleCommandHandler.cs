@@ -72,7 +72,7 @@ namespace NextPipe.Core.Commands.Handlers
                 return Response.Unsuccessful("Can't delete module while it is installing or uninstalling. Wait until ModulStatus changes");
             }
             
-            var result = await _moduleRepository.SetModuleStatusUninstalling(cmd.Id.Value);
+            var result = await _moduleRepository.SetModuleStatusUninstall(cmd.Id.Value);
 
             if (result == null)
             {

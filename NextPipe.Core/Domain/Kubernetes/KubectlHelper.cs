@@ -28,7 +28,8 @@ namespace NextPipe.Core.Kubernetes
         Task InstallService(V1Service service, string nameSpace = "default");
         Task<string> DeleteService(string name, string nameSpace = "default");
         Task<Response> InstallModule(V1Deployment moduleDeployment, string nameSpace = "default");
-        
+        Task<Response> UninstallModule(string moduleName, string nameSpace = "default");
+
 
     }
     
@@ -200,7 +201,29 @@ namespace NextPipe.Core.Kubernetes
             
             return Response.Success();
         }
-        
+
+        public async Task<Response> UninstallModule(string moduleName, string nameSpace = "default")
+        {
+            var modules = await GetDeployment(moduleName);
+
+            if (modules is null)
+            {
+                return Response.Unsuccessful(
+                    $"There is no deployment running in kubernetes with the specified deployment name: {moduleName}");
+            }
+            try
+            {
+                await _client.DeleteNamespacedDeploymentWithHttpMessagesAsync(moduleName, nameSpace);
+            }
+            catch (Exception e)
+            {
+                return Response.Unsuccessful(e.Message);
+                
+            }
+
+            return Response.Success();
+        }
+
         public static string KubectlApplyRabbitService()
         {
             return "cd wwwroot && kubectl apply -f rabbitmq-service.yml";

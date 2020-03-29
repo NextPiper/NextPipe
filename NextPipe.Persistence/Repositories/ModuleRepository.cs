@@ -15,7 +15,7 @@ namespace NextPipe.Persistence.Repositories
         Task<Module> GetModuleByImageName(string imageName);
         Task AppendLog(Guid id, string log);
         Task<Module> GetModuleByModuleName(string moduleName);
-        Task<Module> SetModuleStatusUninstalling(Guid moduleId);
+        Task<Module> SetModuleStatusUninstall(Guid moduleId);
         Task<Module> UpdateDesiredReplicas(Guid moduleId, int replicas);
         Task<IEnumerable<Module>> GetModulesByModuleStatus(ModuleStatus moduleStatus);
     }
@@ -62,7 +62,7 @@ namespace NextPipe.Persistence.Repositories
             return await Collection().Find(t => t.ModuleName.Equals(moduleName)).SingleOrDefaultAsync();
         }
 
-        public async Task<Module> SetModuleStatusUninstalling(Guid moduleId)
+        public async Task<Module> SetModuleStatusUninstall(Guid moduleId)
         {
             return await Collection().FindOneAndUpdateAsync(t => t.Id == moduleId,
                 Update.Set(t => t.ModuleStatus, ModuleStatus.Uninstall));

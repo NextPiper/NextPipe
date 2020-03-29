@@ -18,7 +18,7 @@ namespace NextPipe.Core.CoreRegistry
             For<IRabbitDeploymentManager>().Use<RabbitDeploymentManager>();
             For<IHelmManager>().Use<HelmManager>();
             For<ILogHandler>().Use<LogHandler>();
-            For<IModuleInstallManager>().Use<ModuleInstallManager>();
+            For<IModuleManager>().Use<ModuleManager>();
             
             IncludeRegistry<MessagingInfrastructureRegistry>();
             IncludeRegistry<PersistenceRegistry>();

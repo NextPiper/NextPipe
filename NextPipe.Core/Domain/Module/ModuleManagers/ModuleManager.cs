@@ -8,31 +8,33 @@ using NextPipe.Core.Kubernetes;
 
 namespace NextPipe.Core.Domain.Module.ModuleManagers
 {
-    public interface IModuleInstallManager
+    public interface IModuleManager
     {
-        Task DeployModule(IModuleInstallManagerConfig config);
+        Task DeployModule(IModuleManagerConfig config);
+
+        Task UninstallModule(IModuleManagerConfig config);
         void SetVerboseLogging(bool verboseLogging);
         void AttachTaskIdAndUpdateHandler(Id taskId, Func<Id, ILogHandler, Task> updateHandler);
         void AttachPreviousLogs(string logs);
     }
-    public class ModuleInstallManager : IModuleInstallManager
+    public class ModuleManager : IModuleManager
     {
         private readonly IKubectlHelper _kubectlHelper;
         private readonly ILogHandler _logHandler;
         private bool verboseLogging;
 
-        public ModuleInstallManager(IKubectlHelper kubectlHelper)
+        public ModuleManager(IKubectlHelper kubectlHelper)
         {
             _kubectlHelper = kubectlHelper;
             _logHandler = new LogHandler();
         }
         
         
-        public async Task DeployModule(IModuleInstallManagerConfig config)
+        public async Task DeployModule(IModuleManagerConfig config)
         {
             _logHandler.AttachTaskIdAndUpdateHandler(config.TaskId, config.UpdateCallback);
             
-            await _logHandler.WriteCmd($"{nameof(ModuleInstallManager)}.{nameof(DeployModule)}", verboseLogging);
+            await _logHandler.WriteCmd($"{nameof(ModuleManager)}.{nameof(DeployModule)}", verboseLogging);
             var response = await _kubectlHelper.InstallModule(KubectlHelper.CreateModuleDeployment(
                 config.ImageName,
                 config.ModuleName,
@@ -48,10 +50,23 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
             }
         }
 
-        public async Task DeleteModule()
+        public async Task UninstallModule(IModuleManagerConfig config)
         {
+            _logHandler.AttachTaskIdAndUpdateHandler(config.TaskId, config.UpdateCallback);
             
+            await _logHandler.WriteCmd($"{nameof(ModuleManager)}.{nameof(UninstallModule)}", verboseLogging);
+            var response = await _kubectlHelper.UninstallModule(config.ModuleName);
+
+            if (response.IsSuccessful)
+            {
+                await config.SuccessCallback(config.TaskId, _logHandler);
+            }
+            else
+            {
+                await config.FailureCallback(config.TaskId, _logHandler);
+            }
         }
+        
         
         public void AttachTaskIdAndUpdateHandler(Id taskId, Func<Id, ILogHandler, Task> updateHandler)
         {
