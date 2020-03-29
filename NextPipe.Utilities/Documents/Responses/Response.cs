@@ -24,5 +24,10 @@ namespace NextPipe.Utilities.Documents.Responses
         {
             return new Response(true);
         }
+
+        public static Response SuccesMsg(string msg)
+        {
+            return new Response(true, null, msg);
+        }
     }
 }

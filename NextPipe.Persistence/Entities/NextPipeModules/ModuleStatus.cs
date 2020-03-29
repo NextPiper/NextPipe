@@ -7,6 +7,8 @@ namespace NextPipe.Persistence.Entities.NextPipeModules
         Running,
         Uninstall,
         Uninstalling,
-        Failed
+        Uninstalled,
+        Failed,
+        FailedUninstall
     }
 }

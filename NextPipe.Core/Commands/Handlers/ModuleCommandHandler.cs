@@ -79,7 +79,7 @@ namespace NextPipe.Core.Commands.Handlers
                 return Response.Unsuccessful();
             }
             
-            return Response.Success();
+            return Response.SuccesMsg($"Request accepted, deleting module with id: {cmd.Id}");
         }
 
         public async Task<Response> HandleAsync(ScaleModuleCommand cmd, CancellationToken ct)

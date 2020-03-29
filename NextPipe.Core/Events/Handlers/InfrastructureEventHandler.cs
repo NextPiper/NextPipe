@@ -15,7 +15,7 @@ using TaskStatus = NextPipe.Persistence.Entities.TaskStatus;
 
 namespace NextPipe.Core.Events.Handlers
 {
-    public class TasksEventHandler : 
+    public class InfrastructureEventHandler : 
         IEventHandler<InitializeInfrastructureTaskRequestEvent>,
         IEventHandler<UninstallInfrastructureTaskRequestEvent>
     {
@@ -24,7 +24,7 @@ namespace NextPipe.Core.Events.Handlers
         private readonly IModuleRepository _moduleRepository;
         private readonly IModuleManager _moduleManager;
 
-        public TasksEventHandler(ITasksRepository tasksRepository, IRabbitDeploymentManager rabbitDeploymentManager, IModuleRepository moduleRepository, IModuleManager moduleManager)
+        public InfrastructureEventHandler(ITasksRepository tasksRepository, IRabbitDeploymentManager rabbitDeploymentManager, IModuleRepository moduleRepository, IModuleManager moduleManager)
         {
             _tasksRepository = tasksRepository;
             _rabbitDeploymentManager = rabbitDeploymentManager;

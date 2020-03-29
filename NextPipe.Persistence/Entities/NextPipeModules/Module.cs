@@ -2,7 +2,7 @@ using System;
 
 namespace NextPipe.Persistence.Entities.NextPipeModules
 {
-    public class Module: IEntity
+    public class Module : BaseArchivable, IEntity
     {
         public Guid Id { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;

@@ -13,6 +13,7 @@ using NextPipe.Core.Kubernetes;
 using NextPipe.Core.ValueObjects;
 using NextPipe.Messaging.Infrastructure.Contracts;
 using NextPipe.Persistence.Entities;
+using NextPipe.Persistence.Entities.ArchivedObjects;
 using NextPipe.Persistence.Entities.Metadata;
 using NextPipe.Persistence.Entities.NextPipeModules;
 using NextPipe.Persistence.Repositories;
@@ -27,14 +28,16 @@ namespace NextPipe.Core.Events.Handlers
         private readonly IKubectlHelper _kubectlHelper;
         private readonly IEventPublisher _eventPublisher;
         private readonly IModuleRepository _moduleRepository;
+        private readonly IArchiveRepository _archiveRepository;
         private const string NEXTPIPE_DEPLOYMENT = "nextpipe-deployment";
 
-        public ResourceAndStateCleanEventHandler(ITasksRepository tasksRepository, IKubectlHelper kubectlHelper, IEventPublisher eventPublisher, IModuleRepository moduleRepository)
+        public ResourceAndStateCleanEventHandler(ITasksRepository tasksRepository, IKubectlHelper kubectlHelper, IEventPublisher eventPublisher, IModuleRepository moduleRepository, IArchiveRepository archiveRepository)
         {
             _tasksRepository = tasksRepository;
             _kubectlHelper = kubectlHelper;
             _eventPublisher = eventPublisher;
             _moduleRepository = moduleRepository;
+            _archiveRepository = archiveRepository;
         }
         
         public async Task HandleAsync(CleanupHangingTasksEvent evt, CancellationToken ct)
@@ -75,11 +78,75 @@ namespace NextPipe.Core.Events.Handlers
                 case TaskType.ModuleInstall:
                     await CleanUpModuleInstallTasks(task);
                     break;
+                case TaskType.ModuleUninstall:
+                    await CleanUpModuleUninstallTasks(task);
+                    break;
                 default:
                      return;
             }
         }
 
+        private async Task CleanUpModuleUninstallTasks(NextPipeTask task)
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine($"Task: {task.TaskId} of type: {task.TaskType} is scheduled on dead host: {task.Hostname} - Re-Attaching task to live host");
+            
+            // Get overview of the state which the task was left in...
+            var module = await _moduleRepository.GetById(task.ReferenceId);
+
+            // The module is no longer present and is such not a part of the system anymore, the uninstallTask is thus by definition done
+            if (module == null)
+            {
+                builder.AppendLine(
+                    $"ModuleId: {task.ReferenceId} can't be found for {task.TaskType} - taskId: {task.TaskId} terminating task with {nameof(TaskStatus)}.{nameof(TaskStatus.Failed)}");
+                // why is the module null ?? was it uninstalled and then removed but the task hanging? In that case the module should have been archived under archive type module with the modules id
+                // as typeReferenceId... See if we can find the module there. In that case the task was in principle successful. If we can't find the moduleReference there it can be difficult to
+                // determine why it is null and if the module has even been deleted from kubernetes, mark the task as failed to let the user know.
+                var archive = await _archiveRepository.GetArchiveByTypeAndReferenceId(module.Id, NextPipeObjectType.Module);
+                if (archive != null)
+                {
+                    await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Success, task.Logs + builder.ToString());
+                    return;
+                }
+                await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Failed,task.Logs + builder.ToString());
+                return;
+            }
+
+            if (module.ModuleStatus == ModuleStatus.Uninstalled)
+            {
+                // The respective module made it into ModuleStatus.Uninstall, in this case the task was indeed successful.
+                builder.AppendLine($"The associated module withId:  {module.Id} managed to be uninstalled. Terminating task with {nameof(TaskStatus)}.{TaskStatus.Success}");
+                await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Success, task.Logs + builder.ToString());
+                return;
+            }
+            
+            if (module.ModuleStatus == ModuleStatus.FailedUninstall)
+            {
+                // The respective module managed to run uninstall() but encountered a failedUninstall --> The task should thus fail and the user should take action
+                builder.AppendLine(
+                    $"The associated module withId: {module.Id} managed to be uninstalled. Terminating task with {nameof(TaskStatus)}.{TaskStatus.Failed}");
+                await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Failed,task.Logs + builder.ToString());
+                return;
+            }
+
+            // The module is still existing, and didn't reach an uninstalled state or failedUninstallState try restarting the the task if its restart limit has not been reached
+            if (task.Restarts >= 1)
+            {
+                // We already went through one restart, mark the module as failedUninstall and the task as failed
+                builder.AppendLine("Suspending task... Restart limit 1/1 reached. See logs for failure reason and check if manuel cleanup is required");
+                await _moduleRepository.UpdateModuleStatus(module.Id, ModuleStatus.FailedUninstall);
+                await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Failed, task.Logs + builder.ToString());
+                return;
+            }
+            
+            // Restart the task in order to see if we can resolve the issues from previous dead host
+            var host = new Hostname();
+            builder.AppendLine(
+                $"Task was restarted due to previous host death: Restart 1/1 - Attaching task to host: {host.Value}");
+            await _tasksRepository.IncrementRestarts(task.TaskId, host.Value, task.Logs + builder.ToString());
+            await _eventPublisher.PublishAsync(new UninstallModuleEvent(new Id(module.Id), new Id(task.TaskId)));
+        }
+        
         private async Task CleanUpModuleInstallTasks(NextPipeTask task)
         {
             var builder = new StringBuilder();
@@ -119,6 +186,7 @@ namespace NextPipe.Core.Events.Handlers
                 builder.AppendLine("Suspending task... Restart limit 1/1 reached. See logs for failure reason and check if manuel cleanup is required");
                 await _moduleRepository.UpdateModuleStatus(module.Id, ModuleStatus.Failed);
                 await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Failed, task.Logs + builder.ToString());
+                return;
             }
             
             // Restart the task in order to see if we can resolve the issues from previous dead host

@@ -4,6 +4,8 @@ namespace NextPipe.Persistence.Entities.ProcessLock
     {
         CleanUpHangingTasks,
         InstallPendingModulesTask,
-        CleanModulesReadyForUninstallTask
+        CleanModulesReadyForUninstallTask,
+        ArchiveModules,
+        ArchiveCompletedTasks
     }
 }

@@ -46,6 +46,7 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
             }
             else
             {
+                await _logHandler.WriteLine(response.Message);
                 await config.FailureCallback(config.TaskId, _logHandler);
             }
         }
@@ -55,6 +56,15 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
             _logHandler.AttachTaskIdAndUpdateHandler(config.TaskId, config.UpdateCallback);
             
             await _logHandler.WriteCmd($"{nameof(ModuleManager)}.{nameof(UninstallModule)}", verboseLogging);
+            
+            // check if the deployment exists, if not just reply with a response.success seeing as the module uninstall can go through
+            var result = await _kubectlHelper.GetDeployment(config.ModuleName);
+            if (result == null)
+            {
+                await config.SuccessCallback(config.TaskId, _logHandler);
+                return;
+            }
+            
             var response = await _kubectlHelper.UninstallModule(config.ModuleName);
 
             if (response.IsSuccessful)
@@ -63,6 +73,7 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
             }
             else
             {
+                await _logHandler.WriteLine(response.Message);
                 await config.FailureCallback(config.TaskId, _logHandler);
             }
         }

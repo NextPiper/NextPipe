@@ -6,6 +6,7 @@ using NextPipe.Core.Commands.Commands.ProcessLockCommands;
 using NextPipe.Core.Domain.NextPipeTask.ValueObject;
 using NextPipe.Core.Domain.SharedValueObjects;
 using NextPipe.Core.Events.Events;
+using NextPipe.Core.Events.Events.ArchiveEvents;
 using NextPipe.Core.Events.Events.ModuleEvents;
 using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
@@ -20,7 +21,9 @@ namespace NextPipe.Core.Commands.Handlers
     public class BackgroundProcessCommandHandler : CommandHandlerBase,
         ICommandHandler<CleanupHangingTasksCommand, Response>,
         ICommandHandler<InstallPendingModulesCommand, Response>,
-        ICommandHandler<CleanModulesReadyForUninstallCommand, Response>
+        ICommandHandler<CleanModulesReadyForUninstallCommand, Response>,
+        ICommandHandler<ArchiveModulesCommand, Response>,
+        ICommandHandler<ArchiveTasksCommand, Response>
     {
         private readonly IProcessLockRepository _processLockRepository;
         private readonly IKubectlHelper _kubectlHelper;
@@ -57,6 +60,20 @@ namespace NextPipe.Core.Commands.Handlers
             return await InitiateLongRunningProcess(NextPipeProcessType.CleanModulesReadyForUninstallTask,
                 nameof(CleanModulesReadyForUninstallCommand),
                 async () => { await _eventPublisher.PublishAsync(new CleanModulesReadyForUninstallEvent(), ct); });
+        }
+        
+        public async Task<Response> HandleAsync(ArchiveModulesCommand cmd, CancellationToken ct)
+        {
+            return await InitiateLongRunningProcess(NextPipeProcessType.ArchiveModules,
+                nameof(ArchiveModulesCommand),
+                async () => { await _eventPublisher.PublishAsync(new ArchiveModulesEvent(), ct); });
+        }
+
+        public async Task<Response> HandleAsync(ArchiveTasksCommand cmd, CancellationToken ct)
+        {
+            return await InitiateLongRunningProcess(NextPipeProcessType.ArchiveCompletedTasks,
+                nameof(ArchiveTasksCommand),
+                async () => { await _eventPublisher.PublishAsync(new ArchiveTasksEvent(), ct); });
         }
 
         private async Task<Response> InitiateLongRunningProcess(NextPipeProcessType processType, string cmdName, Func<Task> func)

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using LamarCodeGeneration.Frames;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson.IO;
 using MongoDB.Driver;
 using NextPipe.Persistence.Configuration;
 using NextPipe.Persistence.Entities;
@@ -26,6 +27,7 @@ namespace NextPipe.Persistence.Repositories
         Task<IEnumerable<NextPipeTask>> GetAllRunningTasks(int page, int pageSize);
         Task IncrementRestarts(Guid taskId, string hostname, string logs = null);
         Task UpdateStatus(Guid taskId, TaskStatus taskStatus, QueueStatus queueStatus);
+        Task<IEnumerable<NextPipeTask>> GetCompletedTasks();
     }
     
     public class TasksRepository : BaseMongoRepository<NextPipeTask>, ITasksRepository
@@ -172,6 +174,12 @@ namespace NextPipe.Persistence.Repositories
                 Update
                 .Set(t => t.QueueStatus, queueStatus)
                 .Set(t => t.TaskStatus, taskStatus));
+        }
+
+        public async Task<IEnumerable<NextPipeTask>> GetCompletedTasks()
+        {
+            return await Collection()
+                .Find(t => t.TaskStatus == TaskStatus.Failed || t.TaskStatus == TaskStatus.Success).ToListAsync();
         }
     }
 }

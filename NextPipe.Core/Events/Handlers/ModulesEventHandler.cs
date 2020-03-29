@@ -6,8 +6,10 @@ using NextPipe.Core.Domain.Module.ModuleManagers;
 using NextPipe.Core.Domain.Module.ValueObjects;
 using NextPipe.Core.Domain.NextPipeTask.ValueObject;
 using NextPipe.Core.Domain.SharedValueObjects;
+using NextPipe.Core.Events.Events.ArchiveEvents;
 using NextPipe.Core.Events.Events.ModuleEvents;
 using NextPipe.Core.Helpers;
+using NextPipe.Messaging.Infrastructure.Contracts;
 using NextPipe.Persistence.Entities;
 using NextPipe.Persistence.Entities.ArchivedObjects;
 using NextPipe.Persistence.Entities.NextPipeModules;
@@ -26,13 +28,15 @@ namespace NextPipe.Core.Events.Handlers
         private readonly IModuleRepository _moduleRepository;
         private readonly ITasksRepository _tasksRepository;
         private readonly IModuleManager _moduleManager;
+        private readonly IEventPublisher _eventPublisher;
         private readonly IArchiveRepository _archiveRepository;
         
-        public ModulesEventHandler(IModuleRepository moduleRepository, ITasksRepository tasksRepository, IModuleManager moduleManager, IArchiveRepository archiveRepository)
+        public ModulesEventHandler(IModuleRepository moduleRepository, ITasksRepository tasksRepository, IModuleManager moduleManager, IEventPublisher eventPublisher)
         {
             _moduleRepository = moduleRepository;
             _tasksRepository = tasksRepository;
             _moduleManager = moduleManager;
+            _eventPublisher = eventPublisher;
         }
         
         public async Task HandleAsync(InstallPendingModulesEvent evt, CancellationToken ct)
@@ -83,28 +87,7 @@ namespace NextPipe.Core.Events.Handlers
             await _moduleRepository.UpdateModuleStatus(module.Id, ModuleStatus.Installing);
             
             // Create a task to handle this installation
-            NextPipeTask task;
-            if (evt.TaskId != null) // If the module event comes with previous taskId then attach to that task instead.
-            {
-                task = await _tasksRepository.GetTaskByTaskId(evt.TaskId.Value);
-                _moduleManager.AttachPreviousLogs(task.Logs);
-            }
-            else
-            {
-                task = new NextPipeTask
-                {
-                    Id = new Id().Value,
-                    QueueStatus = QueueStatus.Running,
-                    TaskId = new Id().Value,
-                    TaskStatus = TaskStatus.Running,
-                    TaskPriority = TaskPriority.Medium,
-                    TaskType = TaskType.ModuleInstall,
-                    Hostname = new Hostname().Value,
-                    ReferenceId = module.Id,
-                    Metadata = null
-                };
-                await _tasksRepository.Insert(task);
-            }
+            NextPipeTask task = await AttachToTaskOrStartNew(evt.TaskId, new Id(module.Id), TaskType.ModuleInstall);
             
             _moduleManager.SetVerboseLogging(true);
             await _moduleManager.DeployModule(new ModuleManagerConfig(
@@ -129,54 +112,54 @@ namespace NextPipe.Core.Events.Handlers
         {
             var removeModule = await _moduleRepository.GetById(evt.ModuleId.Value);
             await _moduleRepository.UpdateModuleStatus(removeModule.Id, ModuleStatus.Uninstalling);
-            Console.WriteLine("Uninstall that module or attach to task for restart");
+            
+            NextPipeTask task = await AttachToTaskOrStartNew(evt.TaskId, new Id(removeModule.Id), TaskType.ModuleUninstall);
+            
+            _moduleManager.SetVerboseLogging(true);
+
+            // Maybe cleanup such that we do not need to pass alot of parameters which are redundant. We could make same design as rabbitDeploymentManager...
+            await _moduleManager.UninstallModule(new ModuleManagerConfig(evt.TaskId, new ModuleReplicas(removeModule.ModuleReplicas), 
+                new ModuleName(removeModule.ModuleName), new ImageName(removeModule.ImageName),
+                async (id, logHandler) =>
+                {
+                    await _moduleRepository.SetModuleStatus(removeModule.Id, ModuleStatus.Uninstalled);
+                    await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Success, logHandler.GetLog());
+                    _eventPublisher.PublishAsync(new ArchiveModuleEvent(new Id(removeModule.Id)), ct);
+                },
+                async (id, logHandler) =>
+                {
+                    await _moduleRepository.SetModuleStatus(removeModule.Id, ModuleStatus.FailedUninstall);
+                    await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Failed, logHandler.GetLog());
+                },
+                async (id, logHandler) => { await _tasksRepository.AppendLog(task.TaskId, logHandler.GetLog()); }));
+        }
+
+        private async Task<NextPipeTask> AttachToTaskOrStartNew(Id taskId, Id moduleId, TaskType taskType)
+        {
             NextPipeTask task;
-            if (evt.TaskId != null)
+            if (taskId != null)
             {
-                task = await _tasksRepository.GetTaskByTaskId(evt.TaskId.Value);
+                task = await _tasksRepository.GetTaskByTaskId(taskId.Value);
                 _moduleManager.AttachPreviousLogs(task.Logs);
             }
             else
             {
                 task = new NextPipeTask
                 {
-                    CreatedAt = DateTime.Now,
-                    EditedAt = DateTime.Now,
                     Id = new Id().Value,
                     Hostname = new Hostname().Value,
-                    ReferenceId = evt.ModuleId.Value,
+                    ReferenceId = moduleId.Value,
                     TaskId = new Id().Value,
                     TaskStatus = TaskStatus.Running,
-                    TaskType = TaskType.ModuleUninstall,
+                    TaskType = taskType,
                     QueueStatus = QueueStatus.Running,
-                    Metadata = null
+                    Metadata = null,
+                    TaskPriority = TaskPriority.Medium
                 };
                 await _tasksRepository.Insert(task);
             }
-            _moduleManager.SetVerboseLogging(true);
 
-            await _moduleManager.UninstallModule(new ModuleManagerConfig(evt.TaskId, new ModuleReplicas(removeModule.ModuleReplicas), 
-                new ModuleName(removeModule.ModuleName), new ImageName(removeModule.ImageName),
-                async (id, logHandler) =>
-                {
-                    await _archiveRepository.Insert(new ArchiveObject // ask if this is alright of course method should be made, but is it alright to change in the database here 
-                    {
-                        Id = removeModule.Id,
-                        ArchiveReason = ReasonForArchive.Uninstalled,
-                        CreatedAt = DateTime.Now,
-                        Type = NextPipeObjectType.Module,
-                    });
-                    await _moduleRepository.Delete(removeModule.Id);
-                    await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Success, logHandler.GetLog());
-
-                },
-                async (id, LogHandler) =>
-                {
-                    await _moduleRepository.SetModuleStatusUninstall(removeModule.Id);
-                    await _tasksRepository.FinishTask(task.TaskId, TaskStatus.Failed, LogHandler.GetLog());
-                },
-                async (id, logHandler) => { await _tasksRepository.AppendLog(task.TaskId, logHandler.GetLog()); }));
-
+            return task;
         }
     }
 }

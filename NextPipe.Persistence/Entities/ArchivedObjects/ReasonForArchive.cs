@@ -4,5 +4,6 @@ namespace NextPipe.Persistence.Entities.ArchivedObjects
     {
         Uninstalled,
         Failed,
+        TaskCompleted
     }
 }

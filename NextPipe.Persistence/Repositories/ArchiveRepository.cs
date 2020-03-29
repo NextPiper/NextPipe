@@ -9,8 +9,9 @@ namespace NextPipe.Persistence.Repositories
 {
     public interface IArchiveRepository : IMongoRepository<ArchiveObject>
     {
-        public Task UpdateReasonForArchive(Guid id, ReasonForArchive reason);
-        public Task UpdateNextPipeObjectType(Guid id, NextPipeObjectType nextPipeObjectType);
+        Task UpdateReasonForArchive(Guid id, ReasonForArchive reason);
+        Task UpdateNextPipeObjectType(Guid id, NextPipeObjectType nextPipeObjectType);
+        Task<ArchiveObject> GetArchiveByTypeAndReferenceId(Guid id, NextPipeObjectType type);
 
     }
     public class ArchivedRepository : BaseMongoRepository<ArchiveObject>, IArchiveRepository
@@ -27,6 +28,11 @@ namespace NextPipe.Persistence.Repositories
         public Task UpdateNextPipeObjectType(Guid id, NextPipeObjectType nextPipeObjectType)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<ArchiveObject> GetArchiveByTypeAndReferenceId(Guid id, NextPipeObjectType type)
+        {
+            return await Collection().Find(t => t.Type == type && t.TypeReferenceId == id).SingleOrDefaultAsync();
         }
     }
 }
