@@ -44,9 +44,9 @@ namespace NextPipe
             // in-comment this again to get complete IOC validation
             //var container = new Container(services);
             //container.AssertConfigurationIsValid();
-            //services.AddHostedService<ArchiveManagerService>();
-            //services.AddHostedService<ModuleStateManagerService>();
-            //services.AddHostedService<ResourceAndStateManagerService>();
+            services.AddHostedService<ArchiveManagerService>();
+            services.AddHostedService<ModuleStateManagerService>();
+            services.AddHostedService<ResourceAndStateManagerService>();
 
             services.AddSwaggerGen(c =>
             {

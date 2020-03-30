@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using k8s.Models;
 using NextPipe.Core.Domain.Module.KubernetesModule;
 using NextPipe.Core.Domain.Module.ModuleManagers;
 using NextPipe.Core.Domain.Module.ValueObjects;
@@ -188,10 +189,51 @@ namespace NextPipe.Core.Events.Handlers
                 // Find the corresponding live module
                 var liveModule = liveModules.SingleOrDefault(t => t.Deployment.Metadata.Name.Equals(npModule.ModuleName));
 
+                var replicaStatuses = new List<ReplicaStatus>();
+                
                 if (liveModule != null)
                 {
-                    // We have found the corresponding liveModule do all cross checking and log fetching and update repository in the end...
+                    // We have found the corresponding liveModule - do all cross checking and log fetching, then update repository in the end...
                     // <----
+                    var checkList = new List<V1Pod>(liveModule.Pods);
+                    
+                    // Foreach replica pod in the npModule update its content
+                    foreach (var replicaLog in npModule.ReplicaLogs)
+                    {
+                        // Check if pod is still alive
+                        var alive = checkList.SingleOrDefault(t => t.Metadata.Name.Equals(replicaLog.DeploymentId));
+
+                        if (alive != null) // If pod is alive update replicaStatus and read "kubectl pod describe" and "kubectl logs <pod name>"
+                        {
+                            replicaLog.IsAlive = true;
+                            replicaLog.Status = alive.Status.Phase;
+                            replicaLog.PodLog = GetPodLogs(alive.Metadata.Name, replicaLog);
+                            replicaLog.PodDescribe = GetPodDescription(alive.Metadata.Name, replicaLog);
+                            checkList.Remove(alive);
+                        }
+                        else
+                        {
+                            replicaLog.IsAlive = false;
+                            replicaLog.Status = "Pod killed";
+                            replicaLog.PodLog = GetPodLogs(replicaLog.DeploymentId, replicaLog);
+                            replicaLog.PodDescribe = GetPodDescription(replicaLog.DeploymentId, replicaLog);
+                        }
+                    }
+
+                    foreach (var newPod in checkList)
+                    {
+                        npModule.ReplicaLogs.Add(new ReplicaStatus
+                        {
+                            DeploymentId = newPod.Metadata.Name,
+                            IsAlive = true,
+                            Status = newPod.Status.Phase,
+                            PodDescribe = GetPodDescription(newPod.Metadata.Name),
+                            PodLog = GetPodLogs(newPod.Metadata.Name)
+                        });
+                    }
+                    
+                    await _moduleRepository.UpdateHealthStatus(npModule.Id,
+                        liveModule.Deployment.Status.ReadyReplicas.Value, npModule.ReplicaLogs);
                 }
             } 
         } 
@@ -221,6 +263,30 @@ namespace NextPipe.Core.Events.Handlers
                     }
                 }
             }
+        }
+
+        private string GetPodLogs(string podName, ReplicaStatus status = null)
+        {
+            var podLogs = $"kubectl logs {podName}".Bash();
+
+            if (podLogs.IdenticalStart("Error from server (NotFound):"))
+            {
+                return status != null ? status.PodLog : "";
+            }
+
+            return podLogs;
+        }
+
+        private string GetPodDescription(string podName, ReplicaStatus status = null)
+        {
+            var podDescribe = $"kubectl describe pod {podName}".Bash();
+
+            if (podDescribe.IdenticalStart("Error from server (NotFound):"))
+            {
+                return status != null ? status.PodDescribe : "";
+            }
+
+            return podDescribe;
         }
     }
 }

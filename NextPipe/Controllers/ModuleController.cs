@@ -1,13 +1,21 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using k8s.Models;
 using Microsoft.AspNetCore.Mvc;
 using NextPipe.Core.Commands.Commands.ModuleCommands;
+using NextPipe.Core.Domain.Module.KubernetesModule;
 using NextPipe.Core.Domain.Module.ValueObjects;
+using NextPipe.Core.Events.Events.ModuleEvents;
+using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
 using NextPipe.Core.Queries.Queries;
 using NextPipe.Messaging.Infrastructure.Contracts;
 using NextPipe.Persistence.Entities.NextPipeModules;
+using NextPipe.Persistence.Entities.ProcessLock;
+using NextPipe.Persistence.Repositories;
 using NextPipe.Utilities.Documents.Responses;
 using Serilog;
 
@@ -18,10 +26,12 @@ namespace NextPipe.Controllers
     public class ModuleController : BaseController
     {
         private readonly IKubectlHelper _kubectlHelper;
+        private readonly IProcessLockRepository _processLockRepository;
 
-        public ModuleController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter,IKubectlHelper kubectlHelper) : base(logger, queryRouter, commandRouter)
+        public ModuleController(ILogger logger, IQueryRouter queryRouter, ICommandRouter commandRouter, IKubectlHelper kubectlHelper, IProcessLockRepository processLockRepository) : base(logger, queryRouter, commandRouter)
         {
             _kubectlHelper = kubectlHelper;
+            _processLockRepository = processLockRepository;
         }
         
         [HttpPost]
@@ -79,12 +89,19 @@ namespace NextPipe.Controllers
 
         [HttpGet]
         [Route("trial")]
-        public async Task<IActionResult> Trial()
+        public async Task<IActionResult> Trial(NextPipeProcessType type)
         {
-            await _kubectlHelper.ScaleDeployment("nginx", new ModuleReplicas(3));
+
+            await _processLockRepository.Insert(new ProcessLock
+            {
+                Hostname = "localhost",
+                Id = Guid.NewGuid(),
+                NextPipeProcessType = type,
+                ProcessId = Guid.NewGuid()
+            });
             
             
-            return new ObjectResult("");
+            return StatusCode(200);
         }
     }
 }

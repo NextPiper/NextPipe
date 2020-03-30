@@ -36,7 +36,7 @@ namespace NextPipe.Services
         {
             while (IsRunning)
             {
-                await Task.Delay(15.SecToMillis(), cancellationToken);
+                await Task.Delay(15.SecToMillis() + new Random().Next(0,10), cancellationToken);
                 
                 Console.WriteLine("Scheduling long running task for installing pending modules");
 
@@ -50,7 +50,7 @@ namespace NextPipe.Services
         {
             while (IsRunning)
             {
-                await Task.Delay(30.SecToMillis(), cancellationToken);
+                await Task.Delay(15.SecToMillis() + new Random().Next(0,10), cancellationToken);
                 
                 Console.WriteLine("Scheduling long running task for uninstalling modules");
                 var result =
@@ -63,7 +63,7 @@ namespace NextPipe.Services
         {
             while (IsRunning)
             {
-                await Task.Delay(15.SecToMillis(), cancellationToken);
+                await Task.Delay(30.SecToMillis() + new Random().Next(0,10), cancellationToken);
                 
                 Console.WriteLine("Scheduling long running task for health checking running modules");
                 var result =

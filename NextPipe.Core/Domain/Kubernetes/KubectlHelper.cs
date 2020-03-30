@@ -106,7 +106,7 @@ namespace NextPipe.Core.Kubernetes
             // Create json patch for replicas
             var jsonPatch = new JsonPatchDocument<V1Scale>();
             // Insert replicas into patch
-            jsonPatch.Replace(e => e.Spec.Replicas, -1);
+            jsonPatch.Replace(e => e.Spec.Replicas, moduleReplicas.Value);
             
             var patch = new V1Patch(jsonPatch);
             try

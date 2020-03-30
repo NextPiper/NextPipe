@@ -41,7 +41,7 @@ namespace NextPipe.Services
                 // Every 60 seconds starts a TaskResourceCleanupTask
                 await Task.Delay(1.MinToMillis(), cancellationToken);
 
-                Console.WriteLine("Scheduling CleanupHangingTasksCommand");
+                Console.WriteLine($"Scheduling CleanupHangingTasksCommand - at {DateTime.Now.ToString()}");
                 var result = await _commandRouter.RouteAsync<CleanupHangingTasksCommand, Response>(
                     new CleanupHangingTasksCommand(), cancellationToken);
             }

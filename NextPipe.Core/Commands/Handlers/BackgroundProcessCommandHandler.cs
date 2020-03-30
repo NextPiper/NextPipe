@@ -93,17 +93,26 @@ namespace NextPipe.Core.Commands.Handlers
             if (processLock == null)
             {
                 // Request for process lock was not successful return unsuccesfull cmd and try new cleanup in 30 secs
-                LogHandler.WriteLineVerbose($"Couldn't receive processLock for type:{processType}, waiting for next {processType} session");
+                LogHandler.WriteLineVerbose($"Couldn't receive processLock for type:{processType}, occupied by other host: {new Hostname().Value} waiting for next {processType} session");
                 return Response.Unsuccessful();
             }
             
             LogHandler.WriteLineVerbose($"ProcessLock of type: {processType} received for cmd: {cmdName}");
 
-            await func();
+            try
+            {
+                await func();
+            }
+            catch (Exception ex)
+            {
+                LogHandler.WriteLineVerbose($"An exception was thrown while executing long running process of type: {processType} for cmd: {cmdName} --> {ex.Message}");
+                Console.WriteLine(ex);
+            }
 
             LogHandler.WriteLineVerbose($"{processType} process done, deleting processLock with id: {processLock.Id}");
             // The process is done, remove the processLock
             await _processLockRepository.Delete(processLock.Id);
+            LogHandler.WriteLineVerbose($"Deleted processLock withId: {processLock.Id} for process {processType}");
             
             return Response.Success();
         }
@@ -152,7 +161,7 @@ namespace NextPipe.Core.Commands.Handlers
             }
             else
             {
-                LogHandler.WriteLineVerbose("No process was running trying to request processLock");
+                LogHandler.WriteLineVerbose($"No process of type: {processType} was running trying to request processLock");
                 // The process is not running, create a processLock for this host
                 // This might fail if another replica beats us to the finish line
                 return await _processLockRepository.InsertAndReturn(new ProcessLock
@@ -161,7 +170,7 @@ namespace NextPipe.Core.Commands.Handlers
                     Id = new Id().Value,
                     ProcessId = new Id().Value,
                     NextPipeProcessType = NextPipeProcessType.CleanUpHangingTasks
-                });
+                }, new Hostname().Value);
             }
 
             return null;

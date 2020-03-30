@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Schema;
+using NextPipe.Core.Domain.NextPipeTask.ValueObject;
 using NextPipe.Core.Domain.SharedValueObjects;
 
 namespace NextPipe.Core.Helpers
@@ -137,7 +138,7 @@ namespace NextPipe.Core.Helpers
             var builder = new StringBuilder();
             
             builder.AppendLine("------------------------------------------------");
-            builder.AppendLine($"Executing: {cmd} - at: {DateTime.Now.ToString()}");
+            builder.AppendLine($"Executing: {cmd} - at: {DateTime.Now.ToString()} - onHost: {new Hostname().Value}");
             builder.AppendLine("------------------------------------------------");
 
             Console.WriteLine(builder.ToString());

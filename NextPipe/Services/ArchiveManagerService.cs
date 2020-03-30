@@ -36,7 +36,7 @@ namespace NextPipe.Services
         {
             while (IsRunning)
             {
-                await Task.Delay(10.SecToMillis(), cancellationToken);
+                await Task.Delay(30.SecToMillis() + new Random().Next(0,10), cancellationToken);
                 
                 Console.WriteLine("Scheduling long running task for archiving uninstalled modules");
 
@@ -50,7 +50,7 @@ namespace NextPipe.Services
         {
             while (IsRunning)
             {
-                await Task.Delay(1.MinToMillis(), cancellationToken);
+                await Task.Delay(1.MinToMillis() + new Random().Next(0,10), cancellationToken);
                 
                 Console.WriteLine("Scheduling long running task for archiving completed tasks");
 

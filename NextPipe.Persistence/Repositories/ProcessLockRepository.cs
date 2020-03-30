@@ -13,7 +13,7 @@ namespace NextPipe.Persistence.Repositories
     {
         Task<ProcessLock> FindProcessLockByProcessType(NextPipeProcessType type);
         Task<ProcessLock> ReplaceProcessLock(ProcessLock processLock, ProcessLock replaceLock);
-        Task<ProcessLock> InsertAndReturn(ProcessLock processLock);
+        Task<ProcessLock> InsertAndReturn(ProcessLock processLock, string hostname = null);
     }
     
     public class ProcessLockRepository : BaseMongoRepository<ProcessLock>, IProcessLockRepository
@@ -66,7 +66,7 @@ namespace NextPipe.Persistence.Repositories
         /// </summary>
         /// <param name="processLock"></param>
         /// <returns></returns>
-        public async Task<ProcessLock> InsertAndReturn(ProcessLock processLock)
+        public async Task<ProcessLock> InsertAndReturn(ProcessLock processLock, string hostname = null)
         {
             try
             {
@@ -75,7 +75,7 @@ namespace NextPipe.Persistence.Repositories
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Console.WriteLine($"Exception Thrown while trying too insert processLock of type : {processLock.NextPipeProcessType} for host: {hostname} --> {e.Message}");
                 return null;
             }
         }
