@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +17,9 @@ using NextPipe.Messaging.Infrastructure.Contracts;
 using NextPipe.Persistence.Entities.NextPipeModules;
 using NextPipe.Persistence.Entities.ProcessLock;
 using NextPipe.Persistence.Repositories;
+using NextPipe.RequestModels;
 using NextPipe.Utilities.Documents.Responses;
+using NextPipe.Utilities.Resources;
 using Serilog;
 
 namespace NextPipe.Controllers
@@ -36,11 +39,11 @@ namespace NextPipe.Controllers
         
         [HttpPost]
         [Route("")]
-        public async Task<IActionResult> InstallModule(string imageName, int amountOfReplicas, string moduleName)
+        public async Task<IActionResult> InstallModule(string imageName, int amountOfReplicas, string moduleName, ProcessSubmoduleRM[] processSubmodules)
         {
             var result =
                 await RouteAsync<RequestInstallModule, TaskRequestResponse>(
-                    new RequestInstallModule(imageName, amountOfReplicas, moduleName));
+                    new RequestInstallModule(imageName, amountOfReplicas, moduleName, MapProcessSubmodulesRM(processSubmodules.ToList())));
 
             if (result.IsSuccessful)
             {
@@ -102,6 +105,24 @@ namespace NextPipe.Controllers
             
             
             return StatusCode(200);
+        }
+
+
+        private List<ProcessSubmodule> MapProcessSubmodulesRM(List<ProcessSubmoduleRM> submoduleRms)
+        {
+            var list = new List<ProcessSubmodule>();
+
+            foreach (var rm in submoduleRms)
+            {
+                list.Add(new ProcessSubmodule
+                {
+                    SubmoduleImageName = rm.SubmoduleImageName,
+                    SubmoduleName = rm.SubmoduleName,
+                    SubmodulePort = rm.SubmodulePort
+                });
+            }
+
+            return list;
         }
     }
 }
