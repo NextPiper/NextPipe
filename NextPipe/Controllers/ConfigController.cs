@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NextPipe.ActionFilters;
 using NextPipe.Core.Commands.Commands;
+using NextPipe.Core.Queries.Models;
 using NextPipe.Core.Queries.Queries;
 using NextPipe.Messaging.Infrastructure.Contracts;
 using NextPipe.Utilities.Documents.Responses;
@@ -20,10 +21,13 @@ namespace NextPipe.Controllers
         }
 
         [HttpGet]
-        [Route("mq")]
-        public async Task<IActionResult> RequestMessageQue()
+        [Route("rabbitmq")]
+        public async Task<IActionResult> RequestMessageQue(bool loadBalancer = false)
         {
-            return StatusCode(200);
+            var result =
+                await QueryAsync<GetRabbitMQCredentialsQuery, RabbitMQConfig>(new GetRabbitMQCredentialsQuery(loadBalancer));
+
+            return ReadDefaultQuery(result);
         }
     }
 }

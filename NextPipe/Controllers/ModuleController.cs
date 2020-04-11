@@ -21,6 +21,7 @@ using NextPipe.RequestModels;
 using NextPipe.Utilities.Documents.Responses;
 using NextPipe.Utilities.Resources;
 using Serilog;
+using LoadBalancerConfig = NextPipe.Core.Domain.Module.KubernetesModule.LoadBalancerConfig;
 
 namespace NextPipe.Controllers
 {
@@ -39,11 +40,11 @@ namespace NextPipe.Controllers
         
         [HttpPost]
         [Route("")]
-        public async Task<IActionResult> InstallModule(string imageName, int amountOfReplicas, string moduleName, ProcessSubmoduleRM[] processSubmodules)
+        public async Task<IActionResult> InstallModule(string imageName, int amountOfReplicas, string moduleName, LoadBalancerConfigRM needLoadBalancer)
         {
             var result =
                 await RouteAsync<RequestInstallModule, TaskRequestResponse>(
-                    new RequestInstallModule(imageName, amountOfReplicas, moduleName, MapProcessSubmodulesRM(processSubmodules.ToList())));
+                    new RequestInstallModule(imageName, amountOfReplicas, moduleName, MapLoadBalancerConfig(needLoadBalancer)));
 
             if (result.IsSuccessful)
             {
@@ -108,21 +109,14 @@ namespace NextPipe.Controllers
         }
 
 
-        private List<ProcessSubmodule> MapProcessSubmodulesRM(List<ProcessSubmoduleRM> submoduleRms)
+        private LoadBalancerConfig MapLoadBalancerConfig(LoadBalancerConfigRM model)
         {
-            var list = new List<ProcessSubmodule>();
-
-            foreach (var rm in submoduleRms)
+            if (model != null)
             {
-                list.Add(new ProcessSubmodule
-                {
-                    SubmoduleImageName = rm.SubmoduleImageName,
-                    SubmoduleName = rm.SubmoduleName,
-                    SubmodulePort = rm.SubmodulePort
-                });
+                return new LoadBalancerConfig(model.NeedLoadBalancer, model.Port, model.TargetPort);
             }
 
-            return list;
+            return null;
         }
     }
 }

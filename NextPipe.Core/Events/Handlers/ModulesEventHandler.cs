@@ -19,6 +19,7 @@ using NextPipe.Persistence.Entities.ArchivedObjects;
 using NextPipe.Persistence.Entities.NextPipeModules;
 using NextPipe.Persistence.Repositories;
 using SimpleSoft.Mediator;
+using LoadBalancerConfig = NextPipe.Core.Domain.Module.KubernetesModule.LoadBalancerConfig;
 using TaskStatus = NextPipe.Persistence.Entities.TaskStatus;
 
 namespace NextPipe.Core.Events.Handlers
@@ -102,6 +103,7 @@ namespace NextPipe.Core.Events.Handlers
                 new ModuleReplicas(module.DesiredReplicas),
                 new ModuleName(module.ModuleName),
                 new ImageName(module.ImageName),
+                new LoadBalancerConfig(module.LoadBalancerConfig.NeedLoadBalancer,module.LoadBalancerConfig.Port, module.LoadBalancerConfig.TargetPort), 
                 async (id, logHandler) =>
                 {
                     await _moduleRepository.UpdateModuleStatus(module.Id, ModuleStatus.Running);
@@ -126,7 +128,7 @@ namespace NextPipe.Core.Events.Handlers
 
             // Maybe cleanup such that we do not need to pass alot of parameters which are redundant. We could make same design as rabbitDeploymentManager...
             await _moduleManager.UninstallModule(new ModuleManagerConfig(evt.TaskId, new ModuleReplicas(removeModule.DesiredReplicas), 
-                new ModuleName(removeModule.ModuleName), new ImageName(removeModule.ImageName),
+                new ModuleName(removeModule.ModuleName), new ImageName(removeModule.ImageName), new LoadBalancerConfig(removeModule.LoadBalancerConfig.NeedLoadBalancer, removeModule.LoadBalancerConfig.Port, removeModule.LoadBalancerConfig.TargetPort), 
                 async (id, logHandler) =>
                 {
                     await _moduleRepository.SetModuleStatus(removeModule.Id, ModuleStatus.Uninstalled);
@@ -232,11 +234,30 @@ namespace NextPipe.Core.Events.Handlers
                         });
                     }
                     
+                    // Check loadBalancer services for moduleRepository.
+                    var service = await _kubectlHelper.GetService($"{npModule.ModuleName}-service");
+
+                    var loadBalancer = UpdateLoadBalancerStatus(service, npModule);
+                    
                     await _moduleRepository.UpdateHealthStatus(npModule.Id,
-                        liveModule.Deployment.Status.ReadyReplicas.Value, npModule.ReplicaLogs);
+                        liveModule.Deployment.Status.ReadyReplicas.Value, npModule.ReplicaLogs, loadBalancer);
                 }
             } 
-        } 
+        }
+
+        private LoadBalancer UpdateLoadBalancerStatus(V1Service service, Module module)
+        {
+            if (service == null)
+            {
+                return module.LoadBalancer;
+            }
+
+            return new LoadBalancer
+            {
+                ExternalIPs = service.Spec.ExternalIPs,
+                Ports = service.Spec.Ports.Select(t => t.Port)
+            };
+        }
 
         private async Task ValidateReplicaAggrement(IEnumerable<KubernetesModule> liveModules, IEnumerable<Module> npModules)
         {

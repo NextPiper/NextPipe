@@ -10,6 +10,7 @@ using k8s.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using NextPipe.Core.Documents;
+using NextPipe.Core.Domain.Kubernetes;
 using NextPipe.Core.Domain.Module.KubernetesModule;
 using NextPipe.Core.Domain.Module.ValueObjects;
 using NextPipe.Core.Helpers;
@@ -21,6 +22,7 @@ namespace NextPipe.Core.Kubernetes
     {
         V1StatefulSet GetStatefulset(string statefulsetName, string nameSpace = "default");
         Task<V1Service> GetService(string serviceName, string nameSpace = "default");
+        Task<V1Service> FetchRabbitMQService(bool loadBalancer = false);
         Task<V1Deployment> GetDeployment(string deploymentName, string nameSpace = "default");
         Task<IEnumerable<V1Deployment>> GetDeployments(string nameSpace = "default");
         bool ValidateStatefulsetIsRunning(string statefulsetName, string nameSpace = "default");
@@ -32,7 +34,7 @@ namespace NextPipe.Core.Kubernetes
         Task DeletePVCList(IEnumerable<V1PersistentVolumeClaim> pvcList, string nameSpace = "default");
         Task InstallService(V1Service service, string nameSpace = "default");
         Task<string> DeleteService(string name, string nameSpace = "default");
-        Task<Response> InstallModule(V1Deployment moduleDeployment, string nameSpace = "default");
+        Task<Response> InstallModule(V1Deployment moduleDeployment, LoadBalancerConfig loadBalancerConfig, string nameSpace = "default");
         Task<Response> UninstallModule(string moduleName, string nameSpace = "default");
         Task<IEnumerable<KubernetesModule>> GetLiveModules(string nameSpace = "default");
         Task<IEnumerable<V1Pod>> GetDeploymentPods(string deploymentName, string nameSpace = "default");
@@ -59,6 +61,16 @@ namespace NextPipe.Core.Kubernetes
             var result = await _client.ListNamespacedServiceWithHttpMessagesAsync(nameSpace);
 
             return result.Body.Items.SingleOrDefault(t => t.Metadata.Name == serviceName);
+        }
+
+        public async Task<V1Service> FetchRabbitMQService(bool loadBalancer = false)
+        {
+            var result = await _client.ListNamespacedServiceWithHttpMessagesAsync("default");
+            if (loadBalancer)
+            {
+                return result.Body.Items.SingleOrDefault(t => t.Metadata.Name == "rabbitmq-service");    
+            }
+            return result.Body.Items.SingleOrDefault(t => t.Metadata.Name == "rabbitmq");
         }
 
         public async Task<V1Deployment> GetDeployment(string deploymentName, string nameSpace = "default")
@@ -182,6 +194,25 @@ namespace NextPipe.Core.Kubernetes
             }
         }
 
+        public static V1Service CreateV1Service(string moduleName, ServiceType type, int targetPort, int port)
+        {
+            return new V1Service(
+                "v1",
+                "Service",
+                new V1ObjectMeta(
+                    name: $"{moduleName}-service",
+                    labels: new Dictionary<string, string> { {"app", moduleName}},
+                    namespaceProperty: "default"),
+                new V1ServiceSpec(
+                    ports: new List<V1ServicePort>
+                    {
+                        new V1ServicePort(port,"http", protocol: "TCP", targetPort: targetPort)
+                    },
+                    selector: new Dictionary<string, string> { {"app", moduleName}},
+                    type: type.ToString()
+                ));
+        }
+        
         public static V1Deployment CreateModuleDeployment(string imageName, string moduleName, int moduleReplicas)
         {
             return new V1Deployment()
@@ -240,7 +271,7 @@ namespace NextPipe.Core.Kubernetes
         }
 
 
-        public async Task<Response> InstallModule(V1Deployment moduleDeployment, string nameSpace = "default")
+        public async Task<Response> InstallModule(V1Deployment moduleDeployment, LoadBalancerConfig loadBalancerConfig, string nameSpace = "default")
         {
             // First check if the moduleDeployment is already deployed in the system
             var modules = await GetDeployment(moduleDeployment.Metadata.Name);
@@ -253,6 +284,14 @@ namespace NextPipe.Core.Kubernetes
             try
             {
                 await _client.CreateNamespacedDeploymentWithHttpMessagesAsync(moduleDeployment, nameSpace);
+                if (loadBalancerConfig.NeedLoadBalancer)
+                {
+                    var port = await FetchAvailablePort();
+                    var targetPort = loadBalancerConfig.TargetPort == 0 ? 80 : loadBalancerConfig.TargetPort;
+                    
+                    await _client.CreateNamespacedServiceWithHttpMessagesAsync(
+                        CreateV1Service(moduleDeployment.Metadata.Name, ServiceType.LoadBalancer, targetPort: targetPort, port), nameSpace);
+                }
             }
             catch (Exception e)
             {
@@ -260,6 +299,36 @@ namespace NextPipe.Core.Kubernetes
             }
             
             return Response.Success();
+        }
+
+        private async Task<int> FetchAvailablePort(string nameSpace = "default")
+        {
+            var services = await _client.ListNamespacedServiceWithHttpMessagesAsync(nameSpace);
+
+            var occupiedPorts = new List<int>();
+            
+            foreach (var service in services.Body.Items)
+            {
+                foreach (var port in service.Spec.Ports)
+                {
+                    occupiedPorts.Add(port.Port);
+                }
+            }
+
+            var ran = new Random();
+            var validPortFound = false;
+            var validPort = 0;
+
+            while (!validPortFound)
+            {
+                var port = ran.Next(2000, 65000);
+                if (!occupiedPorts.Contains(port))
+                {
+                    validPort = port;
+                    validPortFound = true;
+                }
+            }
+            return validPort;
         }
 
         public async Task<Response> UninstallModule(string moduleName, string nameSpace = "default")
@@ -273,6 +342,13 @@ namespace NextPipe.Core.Kubernetes
             }
             try
             {
+                var service = await GetService($"{moduleName}-service", nameSpace);
+                if (service != null)
+                {
+                    // remove all services with the same name
+                    await _client.DeleteNamespacedServiceWithHttpMessagesAsync($"{moduleName}-service", nameSpace);
+                }
+                
                 await _client.DeleteNamespacedDeploymentWithHttpMessagesAsync(moduleName, nameSpace);
             }
             catch (Exception e)

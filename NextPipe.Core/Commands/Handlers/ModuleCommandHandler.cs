@@ -57,7 +57,13 @@ namespace NextPipe.Core.Commands.Handlers
                 ModuleStatus = ModuleStatus.Pending,
                 ImageName = cmd.ImageName.Value,
                 ModuleName = cmd.ModuleName.Value,
-                DesiredReplicas = cmd.ModuleReplicas.Value
+                DesiredReplicas = cmd.ModuleReplicas.Value,
+                LoadBalancerConfig = new LoadBalancerConfig
+                {
+                    NeedLoadBalancer = cmd.LoadBalancerConfig.NeedLoadBalancer,
+                    Port = cmd.LoadBalancerConfig.Port,
+                    TargetPort = cmd.LoadBalancerConfig.TargetPort
+                }
             });
             
             return TaskRequestResponse.TaskRequestAccepted(moduleId.Value, "Module was accepted and is awaiting upstart");

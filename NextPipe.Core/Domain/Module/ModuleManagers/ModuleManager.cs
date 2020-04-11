@@ -37,7 +37,7 @@ namespace NextPipe.Core.Domain.Module.ModuleManagers
             var response = await _kubectlHelper.InstallModule(KubectlHelper.CreateModuleDeployment(
                 config.ImageName,
                 config.ModuleName,
-                config.ModuleReplicas));
+                config.ModuleReplicas), config.LoadBalancerConfig);
 
             if (response.IsSuccessful)
             {
