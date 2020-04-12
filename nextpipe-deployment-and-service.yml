@@ -24,7 +24,7 @@ spec:
           command: ["cp", "/usr/local/bin/kubectl", "/data/kubectl"]
       containers:
       - name: nextpipe-controlplane-container
-        image: nextpipe:6.5
+        image: nextpipe:7.1
         resources:
           limits:
             memory: "256Mi"

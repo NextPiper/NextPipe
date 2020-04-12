@@ -189,6 +189,7 @@ namespace NextPipe.Core.Events.Handlers
             foreach (var npModule in npModules)
             {
                 // Find the corresponding live module
+                ;
                 var liveModule = liveModules.SingleOrDefault(t => t.Deployment.Metadata.Name.Equals(npModule.ModuleName));
 
                 var replicaStatuses = new List<ReplicaStatus>();
@@ -204,7 +205,6 @@ namespace NextPipe.Core.Events.Handlers
                     {
                         // Check if pod is still alive
                         var alive = checkList.SingleOrDefault(t => t.Metadata.Name.Equals(replicaLog.DeploymentId));
-
                         if (alive != null) // If pod is alive update replicaStatus and read "kubectl pod describe" and "kubectl logs <pod name>"
                         {
                             replicaLog.IsAlive = true;
@@ -238,9 +238,13 @@ namespace NextPipe.Core.Events.Handlers
                     var service = await _kubectlHelper.GetService($"{npModule.ModuleName}-service");
 
                     var loadBalancer = UpdateLoadBalancerStatus(service, npModule);
+
+                    var readyReplicas = liveModule.Deployment.Status.ReadyReplicas.HasValue
+                        ? liveModule.Deployment.Status.ReadyReplicas.Value
+                        : 0;
                     
                     await _moduleRepository.UpdateHealthStatus(npModule.Id,
-                        liveModule.Deployment.Status.ReadyReplicas.Value, npModule.ReplicaLogs, loadBalancer);
+                     readyReplicas, npModule.ReplicaLogs, loadBalancer);
                 }
             } 
         }
@@ -251,10 +255,10 @@ namespace NextPipe.Core.Events.Handlers
             {
                 return module.LoadBalancer;
             }
-
+            
             return new LoadBalancer
             {
-                ExternalIPs = service.Spec.ExternalIPs,
+                ExternalIPs = service.Status.LoadBalancer.Ingress.Select(t => new LoadBalancerExternal {Hostname = t.Hostname, ExternalIp = t.Ip}),
                 Ports = service.Spec.Ports.Select(t => t.Port)
             };
         }
