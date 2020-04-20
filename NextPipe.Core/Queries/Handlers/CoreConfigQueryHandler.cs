@@ -23,8 +23,13 @@ namespace NextPipe.Core.Queries.Handlers
         public async Task<RabbitMQConfig> HandleAsync(GetRabbitMQCredentialsQuery query, CancellationToken ct)
         {
             var rabbitService = await _kubectlHelper.FetchRabbitMQService(query.LoadBalancer);
-            
-            return new RabbitMQConfig(rabbitService.Spec.ClusterIP, _rabbitConfig.Value.RabbitServiceUsername, _rabbitConfig.Value.RabbitServicePassword, 5672);
+
+            if (rabbitService != null)
+            {
+                return new RabbitMQConfig(rabbitService.Spec.ClusterIP, _rabbitConfig.Value.RabbitServiceUsername, _rabbitConfig.Value.RabbitServicePassword, 5672);
+            }
+
+            return null;
         }
     }
 }

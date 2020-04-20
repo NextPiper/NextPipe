@@ -1,16 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using k8s.Models;
 using Microsoft.AspNetCore.Mvc;
 using NextPipe.Core.Commands.Commands.ModuleCommands;
-using NextPipe.Core.Domain.Module.KubernetesModule;
-using NextPipe.Core.Domain.Module.ValueObjects;
-using NextPipe.Core.Events.Events.ModuleEvents;
-using NextPipe.Core.Helpers;
 using NextPipe.Core.Kubernetes;
 using NextPipe.Core.Queries.Queries;
 using NextPipe.Messaging.Infrastructure.Contracts;
@@ -19,7 +11,6 @@ using NextPipe.Persistence.Entities.ProcessLock;
 using NextPipe.Persistence.Repositories;
 using NextPipe.RequestModels;
 using NextPipe.Utilities.Documents.Responses;
-using NextPipe.Utilities.Resources;
 using Serilog;
 using LoadBalancerConfig = NextPipe.Core.Domain.Module.KubernetesModule.LoadBalancerConfig;
 
@@ -108,14 +99,13 @@ namespace NextPipe.Controllers
             return StatusCode(200);
         }
 
-
         private LoadBalancerConfig MapLoadBalancerConfig(LoadBalancerConfigRM model)
         {
             if (model != null)
             {
                 return new LoadBalancerConfig(model.NeedLoadBalancer, model.Port, model.TargetPort);
             }
-
+            
             return null;
         }
     }

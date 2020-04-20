@@ -12,8 +12,6 @@ namespace NextPipe.Persistence.PersistenceRegistry
         {
             For<IMongoClient>().Use(ctx =>
             {
-                Console.WriteLine(ctx.GetInstance<IOptions<MongoDBPersistenceConfiguration>>().Value
-                    .MongoClusterConnectionString);
                 return new MongoClient(ctx.GetInstance<IOptions<MongoDBPersistenceConfiguration>>().Value
                         .MongoClusterConnectionString);
             }).Singleton();

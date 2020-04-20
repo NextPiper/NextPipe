@@ -79,7 +79,6 @@ namespace NextPipe
 
             app.UseAuthorization();
 
-
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
