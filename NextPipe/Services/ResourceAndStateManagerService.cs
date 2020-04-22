@@ -26,7 +26,7 @@ namespace NextPipe.Services
             isRunning = true;
             
             // Start the taskResourceCleaner thread 
-            await TaskResourceCleaner(cancellationToken);   
+            TaskResourceCleaner(cancellationToken);   
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
@@ -36,14 +36,21 @@ namespace NextPipe.Services
 
         private async Task TaskResourceCleaner(CancellationToken cancellationToken)
         {
-            while (isRunning)
+            try
             {
-                // Every 60 seconds starts a TaskResourceCleanupTask
-                await Task.Delay(1.MinToMillis(), cancellationToken);
+                while (isRunning)
+                {
+                    // Every 60 seconds starts a TaskResourceCleanupTask
+                    await Task.Delay(1.MinToMillis(), cancellationToken);
 
-                Console.WriteLine($"Scheduling CleanupHangingTasksCommand - at {DateTime.Now.ToString()}");
-                var result = await _commandRouter.RouteAsync<CleanupHangingTasksCommand, Response>(
-                    new CleanupHangingTasksCommand(), cancellationToken);
+                    Console.WriteLine($"Scheduling CleanupHangingTasksCommand - at {DateTime.Now.ToString()}");
+                    var result = await _commandRouter.RouteAsync<CleanupHangingTasksCommand, Response>(
+                        new CleanupHangingTasksCommand(), cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
             }
         }
         

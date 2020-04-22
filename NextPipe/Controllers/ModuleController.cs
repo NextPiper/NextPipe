@@ -82,23 +82,6 @@ namespace NextPipe.Controllers
             return ReadDefaultQuery(result);
         }
 
-        [HttpGet]
-        [Route("trial")]
-        public async Task<IActionResult> Trial(NextPipeProcessType type)
-        {
-
-            await _processLockRepository.Insert(new ProcessLock
-            {
-                Hostname = "localhost",
-                Id = Guid.NewGuid(),
-                NextPipeProcessType = type,
-                ProcessId = Guid.NewGuid()
-            });
-            
-            
-            return StatusCode(200);
-        }
-
         private LoadBalancerConfig MapLoadBalancerConfig(LoadBalancerConfigRM model)
         {
             if (model != null)

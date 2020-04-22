@@ -88,6 +88,7 @@ namespace NextPipe.Core.Commands.Handlers
         {
             // Check if there exists a Process of respective type which is already running...
             LogHandler.WriteLineVerbose($"Request processLock for processType: {processType}");
+            
             var processLock = await RequestProcessLock(processType);
 
             if (processLock == null)
@@ -155,7 +156,7 @@ namespace NextPipe.Core.Commands.Handlers
                         Hostname = new Hostname().Value,
                         Id = new Id().Value,
                         ProcessId = new Id().Value,
-                        NextPipeProcessType = NextPipeProcessType.CleanUpHangingTasks
+                        NextPipeProcessType = processType.ToString()
                     }, process);
                 }
             }
@@ -169,7 +170,7 @@ namespace NextPipe.Core.Commands.Handlers
                     Hostname = new Hostname().Value,
                     Id = new Id().Value,
                     ProcessId = new Id().Value,
-                    NextPipeProcessType = NextPipeProcessType.CleanUpHangingTasks
+                    NextPipeProcessType = processType.ToString()
                 }, new Hostname().Value);
             }
 

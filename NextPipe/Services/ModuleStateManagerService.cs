@@ -34,47 +34,68 @@ namespace NextPipe.Services
 
         private async Task ResolvePendingModules(CancellationToken cancellationToken)
         {
-            while (IsRunning)
+            try
             {
-                await Task.Delay(15.SecToMillis() + new Random().Next(0,10), cancellationToken);
+                while (IsRunning)
+                {
+                    await Task.Delay(15.SecToMillis() + new Random().Next(0,10), cancellationToken);
                 
-                Console.WriteLine("Scheduling long running task for installing pending modules");
+                    Console.WriteLine("Scheduling long running task for installing pending modules");
 
-                var result =
-                    await _commandRouter.RouteAsync<InstallPendingModulesCommand, Response>(
-                        new InstallPendingModulesCommand(),cancellationToken);
+                    var result =
+                        await _commandRouter.RouteAsync<InstallPendingModulesCommand, Response>(
+                            new InstallPendingModulesCommand(),cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
             }
         }
 
         private async Task ResolveUninstallModules(CancellationToken cancellationToken)
         {
-            while (IsRunning)
+            try
             {
-                await Task.Delay(15.SecToMillis() + new Random().Next(0,10), cancellationToken);
+                while (IsRunning)
+                {
+                    await Task.Delay(15.SecToMillis() + new Random().Next(0,10), cancellationToken);
                 
-                Console.WriteLine("Scheduling long running task for uninstalling modules");
-                var result =
-                    await _commandRouter.RouteAsync<CleanModulesReadyForUninstallCommand, Response>(
-                        new CleanModulesReadyForUninstallCommand(), cancellationToken);
+                    Console.WriteLine("Scheduling long running task for uninstalling modules");
+                    var result =
+                        await _commandRouter.RouteAsync<CleanModulesReadyForUninstallCommand, Response>(
+                            new CleanModulesReadyForUninstallCommand(), cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
             }
         }
 
         private async Task StartModuleHealthStatusBackgroundProcess(CancellationToken cancellationToken)
         {
-            while (IsRunning)
+            try
             {
-                await Task.Delay(30.SecToMillis() + new Random().Next(0,10), cancellationToken);
+                while (IsRunning)
+                {
+                    await Task.Delay(30.SecToMillis() + new Random().Next(0,10), cancellationToken);
                 
-                Console.WriteLine("Scheduling long running task for health checking running modules");
-                var result =
-                    await _commandRouter.RouteAsync<HealthCheckModulesCommand, Response>(
-                        new HealthCheckModulesCommand());
+                    Console.WriteLine("Scheduling long running task for health checking running modules");
+                    var result =
+                        await _commandRouter.RouteAsync<HealthCheckModulesCommand, Response>(
+                            new HealthCheckModulesCommand());
+                }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            
         }
 
         public void Dispose()
         {
-            throw new NotImplementedException();
         }
     }
 }

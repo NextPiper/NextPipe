@@ -34,35 +34,49 @@ namespace NextPipe.Services
 
         private async Task StartArchiveUninstalledModulesBackgroundProcess(CancellationToken cancellationToken)
         {
-            while (IsRunning)
+            try
             {
-                await Task.Delay(30.SecToMillis() + new Random().Next(0,10), cancellationToken);
+                while (IsRunning)
+                {
+                    await Task.Delay(30.SecToMillis() + new Random().Next(0,10), cancellationToken);
                 
-                Console.WriteLine("Scheduling long running task for archiving uninstalled modules");
+                    Console.WriteLine("Scheduling long running task for archiving uninstalled modules");
 
-                var result =
-                    await _commandRouter.RouteAsync<ArchiveModulesCommand, Response>(new ArchiveModulesCommand(),
-                        cancellationToken);
+                    var result =
+                        await _commandRouter.RouteAsync<ArchiveModulesCommand, Response>(new ArchiveModulesCommand(),
+                            cancellationToken);
+                }
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+            
         }
 
         private async Task StartArchiveCompletedTasksBackgroundProcess(CancellationToken cancellationToken)
         {
-            while (IsRunning)
+            try
             {
-                await Task.Delay(1.MinToMillis() + new Random().Next(0,10), cancellationToken);
+                while (IsRunning)
+                {
+                    await Task.Delay(1.MinToMillis() + new Random().Next(0,10), cancellationToken);
                 
-                Console.WriteLine("Scheduling long running task for archiving completed tasks");
+                    Console.WriteLine("Scheduling long running task for archiving completed tasks");
 
-                var result =
-                    await _commandRouter.RouteAsync<ArchiveTasksCommand, Response>(new ArchiveTasksCommand(),
-                        cancellationToken);
+                    var result =
+                        await _commandRouter.RouteAsync<ArchiveTasksCommand, Response>(new ArchiveTasksCommand(),
+                            cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                
             }
         }
 
         public void Dispose()
         {
-            throw new NotImplementedException();
         }
     }
 }

@@ -31,7 +31,7 @@ namespace NextPipe.Persistence.Repositories
 
         public async Task<ProcessLock> FindProcessLockByProcessType(NextPipeProcessType type)
         {
-            return await Collection().Find(t => t.NextPipeProcessType == type).SingleOrDefaultAsync();
+            return await Collection().Find(t => t.NextPipeProcessType == type.ToString()).SingleOrDefaultAsync();
         }
 
         /// <summary>

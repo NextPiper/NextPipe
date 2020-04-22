@@ -11,6 +11,6 @@ namespace NextPipe.Persistence.Entities.ProcessLock
         
         // The hostname of the respective machine locking this process
         public string Hostname { get; set; }
-        public NextPipeProcessType NextPipeProcessType { get; set; }
+        public string NextPipeProcessType { get; set; }
     }
 }
