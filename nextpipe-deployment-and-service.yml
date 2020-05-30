@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextpipe-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nextpipe-controlplane
+  template:
+    metadata: 
+      labels:
+        app: nextpipe-controlplane
+    spec:
+      volumes:
+      - name: kubectl
+        emptyDir: {}
+      initContainers:
+        - name: install-kubectl
+          image: allanlei/kubectl
+          volumeMounts:
+          - name: kubectl
+            mountPath: /data
+          command: ["cp", "/usr/local/bin/kubectl", "/data/kubectl"]
+      containers:
+      - name: nextpipe-controlplane-container
+        image: ulriksandberg/nextpipe:7.7
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "100m"
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: kubectl
+          subPath: kubectl
+          mountPath: /usr/local/bin/kubectl
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextpipe-service
+spec:
+  selector:
+    app: nextpipe-controlplane
+  ports:
+  - port: 5555
+    targetPort: 80
+  type: LoadBalancer

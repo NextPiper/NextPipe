@@ -559,3 +559,5 @@ healthchecksdb
 MigrationBackup/
 
 # End of https://www.gitignore.io/api/rider,aspnetcore,visualstudio,visualstudiocode 
+.vscode
+.DS_Store

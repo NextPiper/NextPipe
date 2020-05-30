@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Lamar;
 using Microsoft.AspNetCore.Builder;
@@ -12,6 +13,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 using NextPipe.Configuration;
 using NextPipe.Middleware;
 using NextPipe.Registry;
@@ -33,7 +36,17 @@ namespace NextPipe
             services.AddControllers();
             services.IncludeRegistry<LamarRegistry>();
 
-            services.AddHostedService<KubernetesService>();
+            services.AddMvc().AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+            
+            // in-comment this again to get complete IOC validation
+            //var container = new Container(services);
+            //container.AssertConfigurationIsValid();
+            services.AddHostedService<ArchiveManagerService>();
+            services.AddHostedService<ModuleStateManagerService>();
+            services.AddHostedService<ResourceAndStateManagerService>();
 
             services.AddSwaggerGen(c =>
             {
@@ -65,7 +78,6 @@ namespace NextPipe
             app.UseRouting();
 
             app.UseAuthorization();
-
 
             app.UseEndpoints(endpoints =>
             {

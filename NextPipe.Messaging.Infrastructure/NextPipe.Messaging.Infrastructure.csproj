@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Lamar" Version="4.1.0" />
+      <PackageReference Include="SimpleSoft.Mediator" Version="1.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\NextPipe.Utilities\NextPipe.Utilities.csproj" />
+    </ItemGroup>
+
+</Project>
